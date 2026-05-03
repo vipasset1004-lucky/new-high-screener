@@ -15,6 +15,7 @@ from datetime import datetime, date
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
 import numpy as np
+import pandas as pd
 
 class NumpyJSONProvider(DefaultJSONProvider):
     def default(self, o):
@@ -215,6 +216,29 @@ def scan():
 
 
 # ══════════════════════════════════════════════════════════
+# DB 무결성 체크
+# ══════════════════════════════════════════════════════════
+
+def check_db_integrity():
+    """backtest_history.csv 중복 검사 — 이상 시 로그 출력"""
+    db_path = "backtest_history.csv"
+    if not os.path.exists(db_path):
+        return True
+    try:
+        df = pd.read_csv(db_path, encoding="utf-8-sig")
+        total  = len(df)
+        unique = df.drop_duplicates(subset=["signal_date", "ticker"]).shape[0]
+        if total != unique:
+            print(f"[DB무결성] ⚠️ 중복 발견: 전체 {total}행 / 고유 {unique}행 / 중복 {total - unique}건")
+            return False
+        print(f"[DB무결성] ✅ 정상: {total}행 중복 없음")
+        return True
+    except Exception as e:
+        print(f"[DB무결성] 오류: {e}")
+        return False
+
+
+# ══════════════════════════════════════════════════════════
 # 자동 스캔 스케줄러 — 3개 (21:00 풀/07:00 빠른/16:00 수익)
 # ══════════════════════════════════════════════════════════
 
@@ -289,6 +313,7 @@ def auto_scan_full():
         print(f"[21:00 풀스캔] 완료 → {len(results)}개 "
               f"/ PRIME-S {ps_cnt} / PRIME {pm_cnt} "
               f"/ STRONG_BUY {sb_cnt} / BUY {b_cnt}")
+        check_db_integrity()
     except Exception as e:
         print(f"[21:00 풀스캔] 오류: {e}")
     finally:
