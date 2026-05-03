@@ -537,6 +537,89 @@ def update_live_returns():
     print(f"[live_db] 수익률 업데이트 완료: {len(rows)}건 시도")
 
 
+@app.route("/live-tracking")
+def live_tracking_page():
+    """추적 현황 HTML 페이지"""
+    con = sqlite3.connect(LIVE_DB)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+    cur.execute("SELECT * FROM prime_s_signals ORDER BY live_date DESC, score DESC LIMIT 200")
+    signals = [dict(r) for r in cur.fetchall()]
+    cur.execute("""
+        SELECT substr(live_date,1,7) as month,
+            COUNT(*) as cnt,
+            ROUND(AVG(CASE WHEN ret_20d IS NOT NULL THEN ret_20d END), 2) as avg_ret20,
+            ROUND(AVG(CASE WHEN ret_20d IS NOT NULL AND ret_20d > 0 THEN 1.0 ELSE 0.0 END)*100, 1) as win_rate,
+            SUM(hit_tp1) as tp1_hits, SUM(hit_stop) as stop_hits
+        FROM prime_s_signals WHERE ret_20d IS NOT NULL
+        GROUP BY month ORDER BY month DESC LIMIT 12
+    """)
+    monthly = [dict(r) for r in cur.fetchall()]
+    con.close()
+
+    rows_html = ""
+    for s in signals:
+        ret20 = s.get("ret_20d")
+        ret_str = f"{ret20:+.1f}%" if ret20 is not None else "-"
+        ret_color = "#22c55e" if ret20 and ret20 > 0 else ("#ef4444" if ret20 and ret20 < 0 else "#6b7a99")
+        stop = "🛑" if s.get("hit_stop") else ""
+        tp1  = "🎯" if s.get("hit_tp1") else ""
+        rows_html += f"""<tr>
+            <td>{s.get('live_date','')}</td>
+            <td><a href="https://finance.naver.com/item/main.naver?code={s.get('ticker','')}" target="_blank" style="color:#38bdf8;text-decoration:none">{s.get('name','')} <span style="color:#4a5a7a;font-size:11px">{s.get('ticker','')}</span></a></td>
+            <td style="color:#f59e0b">{s.get('grade','')}</td>
+            <td>{s.get('score','')}</td>
+            <td>{s.get('entry_price',''):,}</td>
+            <td style="color:{ret_color};font-weight:700">{ret_str}</td>
+            <td>{stop}{tp1}</td>
+        </tr>"""
+
+    monthly_html = ""
+    for m in monthly:
+        wr = m.get("win_rate") or 0
+        ar = m.get("avg_ret20") or 0
+        wc = "#22c55e" if wr >= 55 else ("#f59e0b" if wr >= 45 else "#ef4444")
+        ac = "#22c55e" if ar > 0 else "#ef4444"
+        monthly_html += f"""<tr>
+            <td>{m.get('month','')}</td>
+            <td>{m.get('cnt','')}</td>
+            <td style="color:{ac};font-weight:700">{ar:+.1f}%</td>
+            <td style="color:{wc};font-weight:700">{wr}%</td>
+            <td>{m.get('tp1_hits',0)}</td>
+            <td>{m.get('stop_hits',0)}</td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>추적 현황 — PRIME-S</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:#0a1628;color:#c8d8f0;font-family:-apple-system,sans-serif;padding:16px}}
+h1{{font-size:20px;font-weight:800;color:#f0f4ff;margin-bottom:4px}}
+.sub{{font-size:13px;color:#4a5a7a;margin-bottom:20px}}
+.back{{display:inline-block;margin-bottom:16px;color:#38bdf8;font-size:13px;text-decoration:none;padding:6px 14px;border:1px solid #1a3050;border-radius:8px}}
+h2{{font-size:15px;font-weight:700;color:#94a3b8;margin:20px 0 10px;border-left:3px solid #3b82f6;padding-left:10px}}
+table{{width:100%;border-collapse:collapse;font-size:13px}}
+th{{background:#0d1829;color:#4a5a7a;padding:8px 10px;text-align:left;border-bottom:1px solid #1a2540;font-weight:600}}
+td{{padding:8px 10px;border-bottom:1px solid #0d1829}}
+tr:hover td{{background:#0d1829}}
+@media(max-width:600px){{table{{font-size:11px}} td,th{{padding:6px 6px}}}}
+</style></head><body>
+<a href="/" class="back">← 스크리너로 돌아가기</a>
+<h1>📊 추적 현황</h1>
+<div class="sub">PRIME-S 신호 실시간 수익 추적</div>
+
+<h2>월별 성과</h2>
+<table><thead><tr><th>월</th><th>건수</th><th>평균수익(20일)</th><th>승률</th><th>1차익절</th><th>손절</th></tr></thead>
+<tbody>{monthly_html if monthly_html else '<tr><td colspan="6" style="color:#4a5a7a;text-align:center;padding:20px">데이터 없음 (수익률 업데이트 대기 중)</td></tr>'}</tbody></table>
+
+<h2>신호 목록 (최근 200건)</h2>
+<table><thead><tr><th>날짜</th><th>종목</th><th>등급</th><th>점수</th><th>진입가</th><th>20일수익</th><th>결과</th></tr></thead>
+<tbody>{rows_html if rows_html else '<tr><td colspan="7" style="color:#4a5a7a;text-align:center;padding:20px">신호 없음</td></tr>'}</tbody></table>
+</body></html>"""
+    return html
+
+
 @app.route("/api/live-tracking")
 def live_tracking():
     """PRIME-S 라이브 추적 현황 조회"""
