@@ -151,8 +151,7 @@ def scan():
                 name = t["name"]
                 progress = int(5 + (i / total) * 90)
 
-                if i % 5 == 0:
-                    yield f"data: {_dumps({'type': 'progress', 'current': name, 'index': i+1, 'total': total, 'progress': progress, 'found': len(results)})}\n\n"
+                yield f"data: {_dumps({'type': 'progress', 'current': name, 'index': i+1, 'total': total, 'progress': progress, 'found': len(results)})}\n\n"
 
                 try:
                     result = analyze_stock(ticker, name, is_korean=True, index_df=index_df, themes=t.get("themes", []), market_regime=market_regime)
