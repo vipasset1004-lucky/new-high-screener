@@ -125,6 +125,7 @@ def get_results():
 
 @app.route("/api/scan")
 def scan():
+    import queue as _queue
     market = request.args.get("market", "KR")
     top_n = int(request.args.get("top_n", "150"))
     min_score = float(request.args.get("min_score", "40"))
@@ -134,14 +135,16 @@ def scan():
             yield f"data: {_dumps({'type': 'error', 'message': '이미 스캔이 진행 중입니다'})}\n\n"
         return Response(already_running(), mimetype="text/event-stream")
 
-    def generate():
+    msg_queue = _queue.Queue()
+
+    def scan_worker():
         scan_state["running"] = True
         results = []
         try:
             tickers = get_fallback_tickers(top_n)
             total = len(tickers)
 
-            yield f"data: {_dumps({'type': 'status', 'message': f'{total}개 종목 신고가 분석 시작', 'progress': 2, 'total': total})}\n\n"
+            msg_queue.put({'type': 'status', 'message': f'{total}개 종목 신고가 분석 시작', 'progress': 2, 'total': total})
 
             index_df      = fetch_index("^KS11")
             market_regime = get_market_regime(index_df)
@@ -151,20 +154,19 @@ def scan():
                 name = t["name"]
                 progress = int(5 + (i / total) * 90)
 
-                yield f"data: {_dumps({'type': 'progress', 'current': name, 'index': i+1, 'total': total, 'progress': progress, 'found': len(results)})}\n\n"
+                msg_queue.put({'type': 'progress', 'current': name, 'index': i+1, 'total': total, 'progress': progress, 'found': len(results)})
 
                 try:
                     result = analyze_stock(ticker, name, is_korean=True, index_df=index_df, themes=t.get("themes", []), market_regime=market_regime)
                     if result and result["score"] >= min_score:
                         results.append(result)
-                        yield f"data: {_dumps({'type': 'result', 'data': result})}\n\n"
-                except Exception as e:
+                        msg_queue.put({'type': 'result', 'data': result})
+                except Exception:
                     pass
 
                 gc.collect()
                 time.sleep(0.08)
 
-            # 정렬 + RS/유동성 랭킹 + combo_ok
             results.sort(key=lambda x: (0 if x["type"] == "BREAKOUT_BOTTOM" else
                                         1 if x["type"] == "PULLBACK_REBREAK" else 2,
                                         -x["score"]))
@@ -172,9 +174,8 @@ def scan():
             results = enrich_with_predict(results)
             results = add_entry_scores(results)
 
-            # ── (A) 신고가 확산도 (Market Breadth) ──
             breadth_scan  = round(len(results) / total * 100, 1) if total > 0 else 0
-            naver_breadth = fetch_naver_breadth()   # 네이버 전체시장 신고가 수
+            naver_breadth = fetch_naver_breadth()
             prev_cache    = _cache_get(CACHE_KEY)
             prev_breadth  = prev_cache.get("breadth_scan", 0) if prev_cache else 0
             breadth_trend = ("▲" if breadth_scan > prev_breadth else
@@ -195,20 +196,37 @@ def scan():
                 _cache_set(CACHE_PREV_KEY, prev_cache)
             _cache_set(CACHE_KEY, cache_data)
 
-            # PRIME-S 종목 라이브 DB에 저장
             try:
                 saved_ps = save_prime_s_signals(results, scan_date)
                 print(f"[live_db] PRIME-S {saved_ps}건 저장")
             except Exception as e:
                 print(f"[live_db] 저장 오류: {e}")
 
-            yield f"data: {_dumps({'type': 'done', 'total': len(results), 'scan_date': scan_date, 'results': results, 'breadth_scan': breadth_scan, 'naver_breadth': naver_breadth, 'breadth_trend': breadth_trend})}\n\n"
+            msg_queue.put({'type': 'done', 'total': len(results), 'scan_date': scan_date,
+                           'results': results, 'breadth_scan': breadth_scan,
+                           'naver_breadth': naver_breadth, 'breadth_trend': breadth_trend})
 
         except Exception as e:
-            yield f"data: {_dumps({'type': 'error', 'message': str(e)})}\n\n"
+            msg_queue.put({'type': 'error', 'message': str(e)})
         finally:
             scan_state["running"] = False
+            msg_queue.put(None)  # sentinel
             gc.collect()
+
+    t = threading.Thread(target=scan_worker, daemon=True)
+    t.start()
+
+    def generate():
+        while True:
+            try:
+                msg = msg_queue.get(timeout=8)
+                if msg is None:
+                    break
+                yield f"data: {_dumps(msg)}\n\n"
+                if msg.get("type") in ("done", "error"):
+                    break
+            except _queue.Empty:
+                yield ": keep-alive\n\n"  # Render 프록시 연결 유지
 
     return Response(generate(), mimetype="text/event-stream",
                     headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
