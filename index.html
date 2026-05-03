@@ -2,179 +2,302 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>신고가 위치 판별 엔진 v3</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080c14">
+<title>신고가 위치 판별 엔진</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#080c14;color:#e1e5ee;min-height:100vh}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:#080c14;color:#e1e5ee;min-height:100vh;padding-bottom:env(safe-area-inset-bottom,20px);overflow-x:hidden}
 
 /* ── 헤더 ── */
-.header{background:linear-gradient(135deg,#0a0f1e,#0f1628);border-bottom:1px solid #1a2540;padding:16px}
-.header h1{font-size:18px;font-weight:700;background:linear-gradient(90deg,#f59e0b,#ef4444,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:2px}
-.header .sub{font-size:11px;color:#6b7a99;margin-bottom:14px;line-height:1.6}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-select,button{background:#111827;border:1px solid #2a3555;color:#c8d0e0;padding:10px 12px;border-radius:8px;font-size:14px;cursor:pointer;-webkit-appearance:none;appearance:none}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6'%3E%3Cpath d='M0 0l6 6 6-6z' fill='%236b7a99'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-.btn-scan{background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;color:#fff;font-weight:700;font-size:15px;grid-column:1/-1;padding:12px;border-radius:8px}
-.btn-scan:active{opacity:.85}.btn-scan:disabled{opacity:.5;cursor:not-allowed}
-
-/* ── 범례 ── */
-.legend{background:#0a0f1e;border-bottom:1px solid #1a2540;padding:8px 16px;display:flex;gap:16px;overflow-x:auto;flex-wrap:wrap}
-.legend::-webkit-scrollbar{display:none}
-.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:#8896b3}
-.leg-dot{width:7px;height:7px;border-radius:50%}
-
-/* ── 상태바 ── */
-.status-bar{background:#0a0f1e;border-bottom:1px solid #1a2540;padding:10px 16px;display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#6b7a99}
-.stat{display:flex;align-items:center;gap:4px}.stat .val{color:#f59e0b;font-weight:600}
+.header{
+  background:linear-gradient(160deg,#0a0f1e 0%,#0f1a2e 100%);
+  border-bottom:1px solid #1a2540;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 16px;
+}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.header h1{
+  font-size:18px;font-weight:800;
+  background:linear-gradient(90deg,#f59e0b,#ef4444,#8b5cf6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  line-height:1.2
+}
+.header-sub{font-size:11px;color:#5a6a8a;line-height:1.5}
+.controls{display:flex;flex-direction:column;gap:8px}
+.controls-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+select{
+  background:#111827;border:1px solid #1e2d4a;color:#c8d0e0;
+  padding:0 32px 0 12px;border-radius:10px;font-size:16px;
+  height:44px;cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6'%3E%3Cpath d='M0 0l6 6 6-6z' fill='%236b7a99'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+}
+.btn-scan{
+  background:linear-gradient(135deg,#f59e0b,#ef4444);
+  border:none;color:#fff;font-weight:800;font-size:16px;
+  height:50px;border-radius:12px;width:100%;
+  letter-spacing:.3px;
+  transition:opacity .15s, transform .1s;
+}
+.btn-scan:active{opacity:.88;transform:scale(.98)}
+.btn-scan:disabled{opacity:.5;transform:none}
 
 /* ── 진행바 ── */
-.prog-wrap{background:#0a0f1e;padding:10px 16px;display:none}.prog-wrap.on{display:block}
-.prog-bg{background:#1a2540;border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px}
+.prog-wrap{background:#0a0f1e;border-bottom:1px solid #1a2540;padding:10px 16px;display:none}
+.prog-wrap.on{display:block}
+.prog-bg{background:#1a2540;border-radius:4px;height:5px;overflow:hidden;margin-bottom:7px}
 .prog-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#8b5cf6);border-radius:4px;transition:width .3s;width:0%}
-.prog-txt{font-size:11px;color:#6b7a99}
+.prog-txt{font-size:12px;color:#6b7a99}
 
-/* ── 필터 탭 ── */
-.tabs{display:flex;gap:6px;padding:10px 16px;background:#0a0f1e;border-bottom:1px solid #1a2540;overflow-x:auto}
+/* ── 상태바 ── */
+.status-bar{
+  background:#0a0f1e;border-bottom:1px solid #1a2540;
+  padding:8px 16px;display:flex;gap:0;overflow-x:auto;
+}
+.status-bar::-webkit-scrollbar{display:none}
+.stat{
+  display:flex;flex-direction:column;align-items:center;
+  padding:4px 12px;border-right:1px solid #1a2540;flex-shrink:0;min-width:56px;
+}
+.stat:last-child{border-right:none}
+.stat-lbl{font-size:10px;color:#4a5a7a;margin-bottom:2px}
+.stat-val{font-size:14px;font-weight:700;color:#f59e0b;line-height:1}
+
+/* ── 필터 탭 (sticky) ── */
+.tabs-wrap{
+  position:sticky;top:0;z-index:100;
+  background:#090e1c;border-bottom:1px solid #1a2540;
+  box-shadow:0 2px 12px #00000066;
+}
+.tabs{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #2a3555;background:transparent;color:#8896b3;cursor:pointer}
-.tab.active{background:#f59e0b22;border-color:#f59e0b;color:#f59e0b}
-.tab.tb.active{background:#f59e0b22;border-color:#f59e0b;color:#f59e0b}
-.tab.tp.active{background:#3b82f622;border-color:#3b82f6;color:#60a5fa}
-.tab.tt.active{background:#22c55e22;border-color:#22c55e;color:#4ade80}
+.tab{
+  flex-shrink:0;padding:7px 14px;border-radius:20px;
+  font-size:13px;font-weight:700;border:1px solid #1e2d4a;
+  background:transparent;color:#6b7a99;cursor:pointer;
+  min-height:36px;white-space:nowrap;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.tab.active{background:#f59e0b22;border-color:#f59e0b88;color:#f59e0b}
+.tab.tp.active{background:#3b82f622;border-color:#3b82f688;color:#60a5fa}
+.tab.tt.active{background:#22c55e22;border-color:#22c55e88;color:#4ade80}
+.tab.tr.active{background:#8b5cf622;border-color:#8b5cf688;color:#a78bfa}
+
+/* ── 카드 리스트 ── */
+.main{padding:12px 12px 8px}
+.cards{display:flex;flex-direction:column;gap:10px}
+.empty{
+  text-align:center;padding:56px 24px;color:#4a5a7a;
+  font-size:14px;line-height:2
+}
+.empty-icon{font-size:40px;margin-bottom:12px}
 
 /* ── 카드 ── */
-.main{padding:12px}.cards{display:flex;flex-direction:column;gap:10px}
-.empty{text-align:center;padding:48px 16px;color:#6b7a99;font-size:14px;line-height:2}
-.card{background:#0e1525;border-radius:12px;overflow:hidden;border:1px solid #1a2540;border-left:3px solid}
-.card.BREAKOUT_BOTTOM{border-left-color:#f59e0b}.card.PULLBACK_REBREAK{border-left-color:#3b82f6}.card.TREND_CONTINUE{border-left-color:#22c55e}
+.card{
+  background:#0c1422;border-radius:16px;overflow:hidden;
+  border:1px solid #1a2540;border-left:4px solid;
+  cursor:pointer;
+  transition:transform .1s,box-shadow .1s;
+}
+.card:active{transform:scale(.985);box-shadow:0 0 0 2px #f59e0b33}
+.card.BREAKOUT_BOTTOM{border-left-color:#f59e0b}
+.card.PULLBACK_REBREAK{border-left-color:#3b82f6}
+.card.TREND_CONTINUE{border-left-color:#22c55e}
 
-/* 킬러필터 / retest 배지 */
-.badges{padding:8px 14px 0;display:flex;gap:5px;flex-wrap:wrap}
-.bdg{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
-.bdg-killer{background:#f59e0b18;border:1px solid #f59e0b66;color:#f59e0b}
-.bdg-retest{background:#8b5cf618;border:1px solid #8b5cf666;color:#a78bfa}
-.bdg-above30{background:#22c55e18;border:1px solid #22c55e66;color:#4ade80}
-.bdg-ath{background:#ef444418;border:1px solid #ef444466;color:#f87171}
+/* 배지 */
+.badges{padding:10px 14px 0;display:flex;gap:5px;flex-wrap:wrap}
+.bdg{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 9px;border-radius:6px;font-size:11px;font-weight:700;
+}
+.bdg-ath{background:#ef444415;border:1px solid #ef444455;color:#f87171}
+.bdg-killer{background:#f59e0b15;border:1px solid #f59e0b55;color:#fbbf24}
+.bdg-retest{background:#8b5cf615;border:1px solid #8b5cf655;color:#a78bfa}
+.bdg-above30{background:#22c55e15;border:1px solid #22c55e55;color:#4ade80}
 
 /* 카드 헤더 */
-.card-top{padding:10px 14px 6px;display:flex;justify-content:space-between;align-items:flex-start}
+.card-top{padding:10px 14px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .card-left{flex:1;min-width:0}
-.card-name{font-size:16px;font-weight:700;color:#f0f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-meta{font-size:11px;color:#6b7a99;margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.type-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;border:1px solid}
-.type-badge.BREAKOUT_BOTTOM{background:#f59e0b15;color:#f59e0b;border-color:#f59e0b44}
+.card-name{font-size:17px;font-weight:800;color:#f0f4ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:12px;color:#6b7a99;margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.type-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px 9px;border-radius:10px;font-size:12px;font-weight:700;border:1px solid;
+}
+.type-badge.BREAKOUT_BOTTOM{background:#f59e0b15;color:#fbbf24;border-color:#f59e0b44}
 .type-badge.PULLBACK_REBREAK{background:#3b82f615;color:#60a5fa;border-color:#3b82f644}
 .type-badge.TREND_CONTINUE{background:#22c55e15;color:#4ade80;border-color:#22c55e44}
 
 /* 점수 원 */
-.score-ring{width:56px;height:56px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;margin-left:10px;border:2px solid}
+.score-ring{
+  width:62px;height:62px;border-radius:50%;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid;
+}
 .score-ring.S{border-color:#f59e0b;background:#f59e0b12}
 .score-ring.Ap{border-color:#8b5cf6;background:#8b5cf612}
 .score-ring.A{border-color:#3b82f6;background:#3b82f612}
 .score-ring.B{border-color:#22c55e;background:#22c55e12}
-.s-num{font-size:18px;font-weight:800;line-height:1}
+.s-num{font-size:20px;font-weight:900;line-height:1}
 .S .s-num{color:#f59e0b}.Ap .s-num{color:#a78bfa}.A .s-num{color:#60a5fa}.B .s-num{color:#4ade80}
-.s-lbl{font-size:9px;color:#6b7a99;margin-top:1px}
+.s-lbl{font-size:9px;color:#6b7a99;margin-top:2px}
 
-/* Minervini 템플릿 바 */
+/* Minervini 진행바 */
 .template-bar{padding:4px 14px 8px}
-.tmpl-label{display:flex;justify-content:space-between;font-size:10px;color:#6b7a99;margin-bottom:3px}
-.tmpl-bg{background:#1a2540;border-radius:3px;height:4px;overflow:hidden}
+.tmpl-label{display:flex;justify-content:space-between;font-size:11px;color:#6b7a99;margin-bottom:4px}
+.tmpl-bg{background:#1a2540;border-radius:3px;height:5px;overflow:hidden}
 .tmpl-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#f59e0b,#22c55e)}
 
 /* 신호 배지 */
 .sig-row{padding:0 14px 8px;display:flex;gap:5px;flex-wrap:wrap}
-.sig{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;background:#141e35;border:1px solid #1e2e4a;color:#94a3b8}
+.sig{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:4px 9px;border-radius:6px;font-size:12px;font-weight:600;
+  background:#0f1826;border:1px solid #1e2d4a;color:#94a3b8;
+}
 .sig.on{border-color:#22c55e44;color:#4ade80;background:#22c55e12}
-.sig.hot{border-color:#f59e0b44;color:#f59e0b;background:#f59e0b12}
+.sig.hot{border-color:#f59e0b44;color:#fbbf24;background:#f59e0b12}
 .sig.warn{border-color:#ef444444;color:#f87171;background:#ef444412}
 
-/* 수치 그리드 */
-.metrics{padding:2px 14px 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.metric{background:#0a0f1e;border-radius:8px;padding:7px 6px;text-align:center}
-.metric-lbl{font-size:10px;color:#6b7a99;margin-bottom:3px}
-.metric-val{font-size:14px;font-weight:700}
-.cg{color:#f59e0b}.cb{color:#60a5fa}.cgreen{color:#4ade80}.cr{color:#f87171}.cgr{color:#94a3b8}
+/* 수치 그리드 — 2x2 */
+.metrics{padding:2px 14px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.metric{background:#0a0f1e;border-radius:10px;padding:10px 10px;text-align:center}
+.metric-lbl{font-size:11px;color:#5a6a8a;margin-bottom:4px}
+.metric-val{font-size:16px;font-weight:800;line-height:1}
+.cg{color:#fbbf24}.cb{color:#60a5fa}.cgreen{color:#4ade80}.cr{color:#f87171}.cgr{color:#6b7a99}
 
 /* 52주 범위 */
-.range-wrap{padding:0 14px 10px}
-.range-lbl{display:flex;justify-content:space-between;font-size:10px;color:#6b7a99;margin-bottom:4px}
-.range-bg{background:#1a2540;border-radius:4px;height:6px;position:relative}
-.range-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#f59e0b);max-width:100%}
-.range-pin{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:#fff;border-radius:50%;border:2px solid #f59e0b}
+.range-wrap{padding:0 14px 12px}
+.range-lbl{display:flex;justify-content:space-between;font-size:11px;color:#5a6a8a;margin-bottom:5px}
+.range-bg{background:#1a2540;border-radius:4px;height:7px;position:relative;overflow:visible}
+.range-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#1e3a5f,#3b82f6,#f59e0b);max-width:100%}
+.range-pin{
+  position:absolute;top:50%;transform:translate(-50%,-50%);
+  width:13px;height:13px;background:#fff;border-radius:50%;border:2px solid #f59e0b;
+  box-shadow:0 0 6px #f59e0b66;
+}
 
-/* 상세 (펼침) */
-.detail{padding:0 14px 14px;display:none}.card.expanded .detail{display:block}
-.dtitle{font-size:11px;color:#6b7a99;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-.dsec{margin-bottom:12px}
-.dsec-title{font-size:10px;color:#4a5568;margin-bottom:6px;font-weight:600}
-.drow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
-.dname{font-size:11px;color:#8896b3;width:90px;flex-shrink:0}
-.dbg{flex:1;height:5px;background:#1a2540;border-radius:3px;overflow:hidden}
+/* ── 상세 (펼침) ── */
+.expand-hint{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:6px 14px 10px;font-size:11px;color:#4a5a7a;
+}
+.expand-hint svg{transition:transform .25s}
+.card.expanded .expand-hint svg{transform:rotate(180deg)}
+
+.detail{padding:0 14px 14px;display:none}
+.card.expanded .detail{display:block}
+.dtitle{
+  font-size:11px;color:#4a5a7a;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;padding:10px 0 8px;border-top:1px solid #1a2540;
+  text-align:center;
+}
+.dsec{margin-bottom:14px}
+.dsec-title{font-size:11px;color:#3a4a6a;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.drow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dname{font-size:12px;color:#6b7a99;width:100px;flex-shrink:0}
+.dbg{flex:1;height:6px;background:#1a2540;border-radius:3px;overflow:hidden}
 .dfill{height:100%;border-radius:3px}
-.dval{font-size:11px;color:#8896b3;width:30px;text-align:right;flex-shrink:0}
-.tmpl-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.chip{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.dval{font-size:12px;color:#8896b3;width:32px;text-align:right;flex-shrink:0;font-weight:700}
+.tmpl-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700}
 .chip-ok{background:#22c55e18;color:#4ade80;border:1px solid #22c55e33}
 .chip-fail{background:#ef444418;color:#f87171;border:1px solid #ef444433}
-.pen-txt{font-size:11px;color:#f87171;margin-top:6px}
-.desc-txt{font-size:11px;color:#4a5568;margin-top:6px}
+.pen-txt{font-size:12px;color:#f87171;margin-top:6px;line-height:1.5}
+.desc-txt{font-size:12px;color:#4a5a7a;margin-top:6px;line-height:1.6}
+
+/* ── 범례 (하단 접기/펼치기) ── */
+.legend-toggle{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 16px;background:#0a0f1e;border-bottom:1px solid #1a2540;
+  font-size:12px;color:#4a5a7a;cursor:pointer;
+}
+.legend-body{display:none;background:#0a0f1e;border-bottom:1px solid #1a2540;padding:8px 16px}
+.legend-body.open{display:block}
+.leg{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#8896b3;padding:4px 0}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
 </style>
 </head>
 <body>
 
+<!-- ── 헤더 ── -->
 <div class="header">
-  <h1>🔥 신고가 위치 판별 엔진 v4</h1>
-  <p class="sub">
-    Minervini 8기준 · VCP+베이스기간 · RVOL 2x · 유지력 · Retest · ATH · Fibonacci 조정<br>
-    기관은 "신고가 여부"가 아닌 <strong style="color:#f59e0b">위치+구조+수급+확률</strong>을 본다
-  </p>
+  <div class="header-top">
+    <div>
+      <h1>🔥 신고가 위치 판별 엔진</h1>
+      <div class="header-sub">Minervini · VCP · ATH · Fibonacci · Retest 복합 분석</div>
+    </div>
+  </div>
   <div class="controls">
-    <select id="selN"><option value="100">상위 100종목</option><option value="150" selected>상위 150종목</option><option value="200">상위 200종목</option></select>
-    <select id="selMin"><option value="40">최소 40점</option><option value="50" selected>최소 50점</option><option value="60">최소 60점</option></select>
+    <div class="controls-row">
+      <select id="selN">
+        <option value="100">상위 100종목</option>
+        <option value="150" selected>상위 150종목</option>
+        <option value="200">상위 200종목</option>
+      </select>
+      <select id="selMin">
+        <option value="40">최소 40점</option>
+        <option value="50" selected>최소 50점</option>
+        <option value="60">최소 60점</option>
+      </select>
+    </div>
     <button class="btn-scan" id="btnScan" onclick="startScan()">🔍 신고가 위치 분석 시작</button>
   </div>
 </div>
 
-<div class="legend">
-  <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>🏔️ 바닥탈출형 — 120일 첫 돌파, 주도주 초기</div>
-  <div class="leg"><div class="leg-dot" style="background:#3b82f6"></div>💎 눌림재돌파형 — 조정 완료, 2차 상승 시작</div>
-  <div class="leg"><div class="leg-dot" style="background:#22c55e"></div>📈 추세진행형 — 추세 중, 추가 확인 필요</div>
-  <div class="leg"><div class="leg-dot" style="background:#8b5cf6"></div>↩ Retest — 닿고 눌렸다 재돌파, 승률 76%</div>
-</div>
-
-<div class="status-bar">
-  <div class="stat">스캔일시 <span class="val" id="scanDate">-</span></div>
-  <div class="stat">전체 <span class="val" id="cntAll">-</span></div>
-  <div class="stat">🏔️ <span class="val" id="cntBB">-</span></div>
-  <div class="stat">💎 <span class="val" id="cntPR">-</span></div>
-  <div class="stat">📈 <span class="val" id="cntTC">-</span></div>
-  <div class="stat">⚡킬러 <span class="val" id="cntK">-</span></div>
-</div>
-
+<!-- ── 진행바 ── -->
 <div class="prog-wrap" id="progWrap">
   <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
   <div class="prog-txt" id="progTxt">준비 중...</div>
 </div>
 
-<div class="tabs">
-  <button class="tab active" onclick="flt(this,'ALL')">전체</button>
-  <button class="tab tb" onclick="flt(this,'BREAKOUT_BOTTOM')">🏔️ 바닥탈출형</button>
-  <button class="tab tp" onclick="flt(this,'PULLBACK_REBREAK')">💎 눌림재돌파형</button>
-  <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형</button>
-  <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터</button>
-  <button class="tab" onclick="flt(this,'RETEST')">↩ Retest</button>
-  <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가</button>
-  <button class="tab" onclick="flt(this,'TOP')">🔥 S·A+만</button>
+<!-- ── 상태바 ── -->
+<div class="status-bar">
+  <div class="stat"><div class="stat-lbl">스캔일시</div><div class="stat-val" id="scanDate" style="font-size:11px;color:#6b7a99">-</div></div>
+  <div class="stat"><div class="stat-lbl">전체</div><div class="stat-val" id="cntAll">-</div></div>
+  <div class="stat"><div class="stat-lbl">🏔️ 바닥</div><div class="stat-val" id="cntBB">-</div></div>
+  <div class="stat"><div class="stat-lbl">💎 눌림</div><div class="stat-val" id="cntPR">-</div></div>
+  <div class="stat"><div class="stat-lbl">📈 추세</div><div class="stat-val" id="cntTC">-</div></div>
+  <div class="stat"><div class="stat-lbl">⚡ 킬러</div><div class="stat-val" id="cntK">-</div></div>
 </div>
 
+<!-- ── 필터 탭 (sticky) ── -->
+<div class="tabs-wrap">
+  <div class="tabs" id="tabsRow">
+    <button class="tab active" onclick="flt(this,'ALL')">전체</button>
+    <button class="tab tb" onclick="flt(this,'BREAKOUT_BOTTOM')">🏔️ 바닥탈출형</button>
+    <button class="tab tp" onclick="flt(this,'PULLBACK_REBREAK')">💎 눌림재돌파형</button>
+    <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형</button>
+    <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터</button>
+    <button class="tab tr" onclick="flt(this,'RETEST')">↩ Retest</button>
+    <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가</button>
+    <button class="tab" onclick="flt(this,'TOP')">🔥 S·A+만</button>
+  </div>
+</div>
+
+<!-- ── 범례 (접기/펼치기) ── -->
+<div class="legend-toggle" onclick="document.getElementById('legendBody').classList.toggle('open');this.querySelector('.leg-arr').textContent=document.getElementById('legendBody').classList.contains('open')?'▲':'▼'">
+  <span style="font-size:12px;color:#4a5a7a">유형 범례</span>
+  <span class="leg-arr" style="font-size:10px;color:#3a4a6a">▼</span>
+</div>
+<div class="legend-body" id="legendBody">
+  <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div><div>🏔️ <strong style="color:#fbbf24">바닥탈출형</strong> — 120일 박스 첫 돌파, 주도주 초기 단계</div></div>
+  <div class="leg"><div class="leg-dot" style="background:#3b82f6"></div><div>💎 <strong style="color:#60a5fa">눌림재돌파형</strong> — 1차 상승 후 조정 완료, 2차 상승 시작</div></div>
+  <div class="leg"><div class="leg-dot" style="background:#22c55e"></div><div>📈 <strong style="color:#4ade80">추세진행형</strong> — 추세 진행 중, 추가 필터 확인 필요</div></div>
+  <div class="leg"><div class="leg-dot" style="background:#8b5cf6"></div><div>↩ <strong style="color:#a78bfa">Retest 패턴</strong> — 52주 신고가 닿고 3~8% 눌림 후 재돌파, 승률 76%</div></div>
+</div>
+
+<!-- ── 카드 목록 ── -->
 <div class="main">
   <div class="cards" id="cards">
     <div class="empty" id="emptyMsg">
+      <div class="empty-icon">📊</div>
       스캔 버튼으로 신고가 위치 분석 시작<br>
-      <span style="font-size:12px;color:#4a5568;display:block;margin-top:6px">
-        Minervini 8기준 · VCP 진행수축 · RVOL · 3일 유지력 · Retest 복합 분석
+      <span style="font-size:12px;color:#3a4a6a;display:block;margin-top:6px">
+        Minervini 8기준 · VCP 진행수축 · RVOL · 유지력 · ATH 복합 분석
       </span>
     </div>
   </div>
@@ -193,7 +316,7 @@ function startScan(){
   const topN=document.getElementById('selN').value;
   const minS=document.getElementById('selMin').value;
   const btn=document.getElementById('btnScan');
-  btn.disabled=true; btn.textContent='분석 중...';
+  btn.disabled=true; btn.textContent='📡 분석 중...';
   document.getElementById('progWrap').classList.add('on');
   document.getElementById('cards').innerHTML='';
   all=[];
@@ -202,7 +325,7 @@ function startScan(){
     const m=JSON.parse(e.data);
     if(m.type==='progress'){
       document.getElementById('progFill').style.width=(m.progress||0)+'%';
-      document.getElementById('progTxt').textContent=`${m.index}/${m.total} (${m.current}) | 발견: ${m.found}개`;
+      document.getElementById('progTxt').textContent=`${m.index}/${m.total} · ${m.current} | 발견: ${m.found}개`;
     } else if(m.type==='result'){
       all.push(m.data);
       if(show(m.data,cf)) document.getElementById('cards').insertAdjacentHTML('beforeend',card(m.data));
@@ -211,8 +334,8 @@ function startScan(){
       es.close(); all=m.results||all;
       render(all); updateStat({scan_date:m.scan_date,total_found:m.total});
       document.getElementById('progFill').style.width='100%';
-      document.getElementById('progTxt').textContent=`완료! ${m.total}개 발견`;
-      setTimeout(()=>document.getElementById('progWrap').classList.remove('on'),2000);
+      document.getElementById('progTxt').textContent=`✅ 완료! ${m.total}개 발견`;
+      setTimeout(()=>document.getElementById('progWrap').classList.remove('on'),2500);
       btn.disabled=false; btn.textContent='🔍 신고가 위치 분석 시작';
     } else if(m.type==='error'){
       es.close(); alert(m.message);
@@ -223,7 +346,11 @@ function startScan(){
       document.getElementById('progTxt').textContent=m.message;
     }
   };
-  es.onerror=()=>{es.close();btn.disabled=false;btn.textContent='🔍 신고가 위치 분석 시작';document.getElementById('progWrap').classList.remove('on');};
+  es.onerror=()=>{
+    es.close();
+    btn.disabled=false;btn.textContent='🔍 신고가 위치 분석 시작';
+    document.getElementById('progWrap').classList.remove('on');
+  };
 }
 
 function show(r,f){
@@ -239,12 +366,17 @@ function show(r,f){
 function flt(btn,type){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); cf=type; render(all);
+  // 탭 선택 시 목록 맨 위로
+  document.getElementById('cards').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function render(results){
   const filtered=results.filter(r=>show(r,cf));
   const c=document.getElementById('cards');
-  if(!filtered.length){ c.innerHTML=`<div class="empty">조건 맞는 종목 없음<br><span style="font-size:12px;color:#4a5568">필터 변경 또는 재스캔</span></div>`; return; }
+  if(!filtered.length){
+    c.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div>조건 맞는 종목 없음<br><span style="font-size:12px;color:#3a4a6a">필터 변경 또는 재스캔</span></div>`;
+    return;
+  }
   c.innerHTML=filtered.map(card).join('');
   counts(results);
 }
@@ -258,16 +390,16 @@ function card(r){
 
   // 배지
   let bdgs='';
-  if(r.is_ath)  bdgs+=`<span class="bdg bdg-ath">🚀 역사적 신고가 — 위에 매물 없음</span>`;
-  if(isKiller) bdgs+=`<span class="bdg bdg-killer">⚡ 킬러필터 — 120일 첫돌파+RVOL ${r.rvol}x</span>`;
-  if(isRetest) bdgs+=`<span class="bdg bdg-retest">↩ Retest 패턴 (승률76%)</span>`;
+  if(r.is_ath)      bdgs+=`<span class="bdg bdg-ath">🚀 역사적 신고가 — 위에 매물 없음</span>`;
+  if(isKiller)      bdgs+=`<span class="bdg bdg-killer">⚡ 킬러필터 — 첫돌파+RVOL ${r.rvol}x</span>`;
+  if(isRetest)      bdgs+=`<span class="bdg bdg-retest">↩ Retest 패턴 · 승률76%</span>`;
   if(r.above_30pct) bdgs+=`<span class="bdg bdg-above30">✓ 저점+30%↑</span>`;
   const bdgHtml=bdgs?`<div class="badges">${bdgs}</div>`:'';
 
   // 신호
   const sigs=[];
   if(r.first_breakout)  sigs.push({l:'★ 첫 돌파',c:'hot'});
-  if(r.first_vol_surge) sigs.push({l:'★ 거래대금 최초',c:'hot'});
+  if(r.first_vol_surge) sigs.push({l:'★ 최초 대금',c:'hot'});
   if(r.price_held)      sigs.push({l:'📌 가격유지',c:'on'});
   if(r.vol_dried)       sigs.push({l:'📉 거래량↓',c:'on'});
   if(r.above_ma5)       sigs.push({l:'5선위',c:'on'});
@@ -282,7 +414,7 @@ function card(r){
   const adxC=r.adx>25?'cgreen':'cgr';
   const rvolC=r.rvol>=2?'cg':r.rvol>=1.5?'cgreen':'cgr';
 
-  // Minervini 템플릿 통과율
+  // Minervini 템플릿
   const tpct=r.template_pct||0;
   const tColor=tpct>=75?'#22c55e':tpct>=50?'#f59e0b':'#ef4444';
 
@@ -304,11 +436,11 @@ function card(r){
 
   // VCP 상세
   const vd=sd.vcp_detail||{};
-  const baseDaysTxt=vd.base_days>0?` · 베이스 ${vd.base_days}일(${Math.round(vd.base_days/5)}주)`:'';
-  const vcpTxt=`수축횟수(가격):${vd.progressive_price||0}회, 수축횟수(거래량):${vd.progressive_vol||0}회${vd.vol_dryup?' · 거래량드라이업✓':''}${baseDaysTxt}`;
-  const fibTxt=r.fib_depth!=null?`피보나치 조정: ${r.fib_depth}%${r.fib_depth<=38.2?' (✓ 이상적)':r.fib_depth<=50?' (보통)':' (깊음)'}`:'';
+  const baseDaysTxt=vd.base_days>0?` · 베이스 ${vd.base_days}일 (${Math.round(vd.base_days/5)}주)`:'';
+  const vcpTxt=`수축 ${vd.progressive_price||0}회 · 거래량수축 ${vd.progressive_vol||0}회${vd.vol_dryup?' · 드라이업✓':''}${baseDaysTxt}`;
+  const fibTxt=r.fib_depth!=null?`피보나치 조정: ${r.fib_depth}%${r.fib_depth<=38.2?' ✓ 이상적':r.fib_depth<=50?' 보통':' 깊음'}`:'';
 
-  const penHtml=(sd.penalty_rsn?.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(', ')} (${sd.penalty}점)</div>`:'';
+  const penHtml=(sd.penalty_rsn?.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(' · ')} (${sd.penalty}점)</div>`:'';
   const bonusHtml=sd.type_bonus>0?`<div class="drow"><span class="dname" style="color:#f59e0b">유형보너스</span><div class="dbg"><div class="dfill" style="width:${sd.type_bonus/10*100}%;background:#f59e0b"></div></div><span class="dval cg">+${sd.type_bonus}</span></div>`:'';
 
   return `
@@ -320,7 +452,7 @@ function card(r){
       <div class="card-meta">
         <span class="type-badge ${r.type}">${r.type_emoji} ${r.type_ko}</span>
         <span>${r.ticker}</span>
-        <span>신고가 ${r.days_ago===0?'오늘':r.days_ago+'일전'}</span>
+        <span>${r.days_ago===0?'오늘 신고가':r.days_ago+'일전 신고가'}</span>
       </div>
     </div>
     <div class="score-ring ${gcls}">
@@ -329,28 +461,39 @@ function card(r){
     </div>
   </div>
 
-  <!-- Minervini 템플릿 진행바 -->
   <div class="template-bar">
     <div class="tmpl-label">
       <span>Minervini 템플릿</span>
-      <span style="color:${tColor};font-weight:700">${tpct}% 충족 (${r.template_cnt||0}/8)</span>
+      <span style="color:${tColor};font-weight:800">${tpct}% · ${r.template_cnt||0}/8</span>
     </div>
     <div class="tmpl-bg"><div class="tmpl-fill" style="width:${tpct}%"></div></div>
   </div>
 
-  <div class="sig-row">${sigHtml}</div>
+  ${sigHtml?`<div class="sig-row">${sigHtml}</div>`:''}
 
   <div class="metrics">
-    <div class="metric"><div class="metric-lbl">현재가</div><div class="metric-val cg">${Number(r.current_price).toLocaleString()}</div></div>
-    <div class="metric"><div class="metric-lbl">RSI</div><div class="metric-val ${rsiC}">${r.rsi}</div></div>
-    <div class="metric"><div class="metric-lbl">ADX</div><div class="metric-val ${adxC}">${r.adx}</div></div>
-    <div class="metric"><div class="metric-lbl">RVOL</div><div class="metric-val ${rvolC}">${r.rvol}x</div></div>
+    <div class="metric">
+      <div class="metric-lbl">현재가</div>
+      <div class="metric-val cg">${Number(r.current_price).toLocaleString()}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-lbl">RSI</div>
+      <div class="metric-val ${rsiC}">${r.rsi}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-lbl">RVOL</div>
+      <div class="metric-val ${rvolC}">${r.rvol}x</div>
+    </div>
+    <div class="metric">
+      <div class="metric-lbl">20일수익률</div>
+      <div class="metric-val ${r.ret_20d>0?'cgreen':'cr'}">${r.ret_20d>0?'+':''}${r.ret_20d}%</div>
+    </div>
   </div>
 
   <div class="range-wrap">
     <div class="range-lbl">
       <span>52주저 ${Number(r.low_52w).toLocaleString()}</span>
-      <span class="cg">위치 ${r.pos_in_range}%</span>
+      <span class="cg" style="font-weight:700">위치 ${r.pos_in_range}%</span>
       <span>52주고 ${Number(r.high_52w).toLocaleString()}</span>
     </div>
     <div class="range-bg">
@@ -359,8 +502,13 @@ function card(r){
     </div>
   </div>
 
+  <div class="expand-hint">
+    <span>상세 보기</span>
+    <svg width="12" height="7" viewBox="0 0 12 7" fill="none"><path d="M1 1l5 5 5-5" stroke="#4a5a7a" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </div>
+
   <div class="detail">
-    <div class="dtitle">점수 상세 (탭하여 닫기)</div>
+    <div class="dtitle">▴ 상세 분석</div>
 
     <div class="dsec">
       <div class="dsec-title">단계별 점수</div>
@@ -370,16 +518,14 @@ function card(r){
     </div>
 
     <div class="dsec">
-      <div class="dsec-title">Minervini Trend Template (${r.template_cnt||0}/8 충족)</div>
-      <div class="tmpl-chips">
-        ${passChips}${failChips}
-      </div>
+      <div class="dsec-title">Minervini Trend Template · ${r.template_cnt||0}/8 충족</div>
+      <div class="tmpl-chips">${passChips}${failChips}</div>
     </div>
 
     <div class="dsec">
       <div class="dsec-title">VCP 수렴 패턴</div>
-      <div style="font-size:11px;color:#8896b3;line-height:1.6">${vcpTxt}</div>
-      ${fibTxt?`<div style="font-size:11px;color:#8b5cf6;margin-top:4px">💠 ${fibTxt}</div>`:''}
+      <div style="font-size:12px;color:#6b7a99;line-height:1.7">${vcpTxt}</div>
+      ${fibTxt?`<div style="font-size:12px;color:#8b5cf6;margin-top:5px;font-weight:600">💠 ${fibTxt}</div>`:''}
     </div>
 
     <div class="desc-txt">${r.type_desc}</div>
@@ -390,17 +536,18 @@ function card(r){
 function updateStat(d){
   if(d.scan_date){
     const dt=new Date(d.scan_date);
-    document.getElementById('scanDate').textContent=dt.toLocaleDateString('ko-KR')+' '+dt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('scanDate').textContent=
+      `${dt.getMonth()+1}/${dt.getDate()} ${dt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
   }
   counts(all);
 }
 
 function counts(r){
-  document.getElementById('cntAll').textContent=r.length+'개';
-  document.getElementById('cntBB').textContent=r.filter(x=>x.type==='BREAKOUT_BOTTOM').length+'개';
-  document.getElementById('cntPR').textContent=r.filter(x=>x.type==='PULLBACK_REBREAK').length+'개';
-  document.getElementById('cntTC').textContent=r.filter(x=>x.type==='TREND_CONTINUE').length+'개';
-  document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length+'개';
+  document.getElementById('cntAll').textContent=r.length;
+  document.getElementById('cntBB').textContent=r.filter(x=>x.type==='BREAKOUT_BOTTOM').length;
+  document.getElementById('cntPR').textContent=r.filter(x=>x.type==='PULLBACK_REBREAK').length;
+  document.getElementById('cntTC').textContent=r.filter(x=>x.type==='TREND_CONTINUE').length;
+  document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
 }
 </script>
 </body>
