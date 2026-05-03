@@ -445,7 +445,6 @@ function opsFilter(r){
 function render(results){
   let filtered = results.filter(r=>show(r,cf));
   if(opsMode) filtered = filtered.filter(opsFilter);
-  filtered.sort((a,b)=>b.score-a.score);
   const c=document.getElementById('cards');
   if(!filtered.length){
     const msg = opsMode
