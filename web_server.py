@@ -14,10 +14,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
 
 from new_high_screener import (
-    get_fallback_tickers, fetch_daily_data, calculate_indicators,
-    detect_new_high, classify_type, check_holding_power,
-    measure_convergence, check_ma_alignment, score_stock,
-    get_grade, analyze_stock, HIGH_52W_DAYS
+    get_fallback_tickers, analyze_stock, fetch_index
 )
 
 app = Flask(__name__)
@@ -121,6 +118,8 @@ def scan():
 
             yield f"data: {json.dumps({'type': 'status', 'message': f'{total}개 종목 신고가 분석 시작', 'progress': 2, 'total': total}, ensure_ascii=False)}\n\n"
 
+            index_df = fetch_index("^KS11")
+
             for i, t in enumerate(tickers):
                 ticker = t["ticker"]
                 name = t["name"]
@@ -130,7 +129,7 @@ def scan():
                     yield f"data: {json.dumps({'type': 'progress', 'current': name, 'index': i+1, 'total': total, 'progress': progress, 'found': len(results)}, ensure_ascii=False)}\n\n"
 
                 try:
-                    result = analyze_stock(ticker, name, is_korean=True)
+                    result = analyze_stock(ticker, name, is_korean=True, index_df=index_df)
                     if result and result["score"] >= min_score:
                         results.append(result)
                         yield f"data: {json.dumps({'type': 'result', 'data': result}, ensure_ascii=False)}\n\n"
@@ -178,9 +177,10 @@ def auto_scan_job():
     results = []
     try:
         tickers = get_fallback_tickers(150)
+        index_df = fetch_index("^KS11")
         for t in tickers:
             try:
-                r = analyze_stock(t["ticker"], t["name"], is_korean=True)
+                r = analyze_stock(t["ticker"], t["name"], is_korean=True, index_df=index_df)
                 if r and r["score"] >= 40:
                     results.append(r)
             except:

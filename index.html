@@ -55,6 +55,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .bdg-killer{background:#f59e0b18;border:1px solid #f59e0b66;color:#f59e0b}
 .bdg-retest{background:#8b5cf618;border:1px solid #8b5cf666;color:#a78bfa}
 .bdg-above30{background:#22c55e18;border:1px solid #22c55e66;color:#4ade80}
+.bdg-ath{background:#ef444418;border:1px solid #ef444466;color:#f87171}
 
 /* 카드 헤더 */
 .card-top{padding:10px 14px 6px;display:flex;justify-content:space-between;align-items:flex-start}
@@ -124,9 +125,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <body>
 
 <div class="header">
-  <h1>🔥 신고가 위치 판별 엔진 v3</h1>
+  <h1>🔥 신고가 위치 판별 엔진 v4</h1>
   <p class="sub">
-    Minervini 8기준 · VCP 진행수축 · RVOL 2x · 3일 유지력 · Retest 76%승률 패턴<br>
+    Minervini 8기준 · VCP+베이스기간 · RVOL 2x · 유지력 · Retest · ATH · Fibonacci 조정<br>
     기관은 "신고가 여부"가 아닌 <strong style="color:#f59e0b">위치+구조+수급+확률</strong>을 본다
   </p>
   <div class="controls">
@@ -164,6 +165,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형</button>
   <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터</button>
   <button class="tab" onclick="flt(this,'RETEST')">↩ Retest</button>
+  <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가</button>
   <button class="tab" onclick="flt(this,'TOP')">🔥 S·A+만</button>
 </div>
 
@@ -229,6 +231,7 @@ function show(r,f){
   if(f===r.type)   return true;
   if(f==='KILLER') return r.first_breakout && r.rvol>=2.0;
   if(f==='RETEST') return r.retest||r.retest_bonus;
+  if(f==='ATH')    return r.is_ath===true;
   if(f==='TOP')    return r.grade==='S'||r.grade==='A+';
   return false;
 }
@@ -255,6 +258,7 @@ function card(r){
 
   // 배지
   let bdgs='';
+  if(r.is_ath)  bdgs+=`<span class="bdg bdg-ath">🚀 역사적 신고가 — 위에 매물 없음</span>`;
   if(isKiller) bdgs+=`<span class="bdg bdg-killer">⚡ 킬러필터 — 120일 첫돌파+RVOL ${r.rvol}x</span>`;
   if(isRetest) bdgs+=`<span class="bdg bdg-retest">↩ Retest 패턴 (승률76%)</span>`;
   if(r.above_30pct) bdgs+=`<span class="bdg bdg-above30">✓ 저점+30%↑</span>`;
@@ -300,7 +304,9 @@ function card(r){
 
   // VCP 상세
   const vd=sd.vcp_detail||{};
-  const vcpTxt=`수축횟수(가격):${vd.progressive_price||0}회, 수축횟수(거래량):${vd.progressive_vol||0}회${vd.vol_dryup?' · 거래량드라이업✓':''}`;
+  const baseDaysTxt=vd.base_days>0?` · 베이스 ${vd.base_days}일(${Math.round(vd.base_days/5)}주)`:'';
+  const vcpTxt=`수축횟수(가격):${vd.progressive_price||0}회, 수축횟수(거래량):${vd.progressive_vol||0}회${vd.vol_dryup?' · 거래량드라이업✓':''}${baseDaysTxt}`;
+  const fibTxt=r.fib_depth!=null?`피보나치 조정: ${r.fib_depth}%${r.fib_depth<=38.2?' (✓ 이상적)':r.fib_depth<=50?' (보통)':' (깊음)'}`:'';
 
   const penHtml=(sd.penalty_rsn?.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(', ')} (${sd.penalty}점)</div>`:'';
   const bonusHtml=sd.type_bonus>0?`<div class="drow"><span class="dname" style="color:#f59e0b">유형보너스</span><div class="dbg"><div class="dfill" style="width:${sd.type_bonus/10*100}%;background:#f59e0b"></div></div><span class="dval cg">+${sd.type_bonus}</span></div>`:'';
@@ -373,6 +379,7 @@ function card(r){
     <div class="dsec">
       <div class="dsec-title">VCP 수렴 패턴</div>
       <div style="font-size:11px;color:#8896b3;line-height:1.6">${vcpTxt}</div>
+      ${fibTxt?`<div style="font-size:11px;color:#8b5cf6;margin-top:4px">💠 ${fibTxt}</div>`:''}
     </div>
 
     <div class="desc-txt">${r.type_desc}</div>

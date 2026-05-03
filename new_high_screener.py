@@ -1,5 +1,5 @@
 """
-신고가 위치 판별 엔진 v3  ─  기관/전문가 수준
+신고가 위치 판별 엔진 v4  ─  기관/전문가 수준
 ══════════════════════���════════════════════��═══════════════════════
 학술·실전 근거:
   George & Hwang (2004)  ─ 52주 고가 모멘텀 0.65%/월, 장기 비역전
@@ -218,6 +218,11 @@ def detect_new_high(df):
                 if (prev_touch >= prev_52h * 0.99) and (3.0 <= pullback <= 10.0):
                     retest = True
 
+        # ── 역사적 신고가(ATH) 판별 ──
+        # 전체 데이터 최고가와 비교 → ATH = 위에 매물 없음 = 가장 강한 신호
+        all_time_high = float(np.max(high))
+        is_ath = float(high[idx]) >= all_time_high * 0.999
+
         return {
             "found"          : True,
             "days_ago"       : days_ago,
@@ -229,6 +234,7 @@ def detect_new_high(df):
             "first_breakout" : first_breakout,
             "first_vol_surge": first_vol_surge,
             "retest"         : retest,
+            "is_ath"         : is_ath,
         }
 
     return {"found": False}
@@ -481,6 +487,29 @@ def score_vcp(df, nh):
                 detail["vol_dryup"] = False
             detail["dry_ratio"] = round(dry_ratio, 2)
 
+    # ── 베이스 기간 (O'Neil: 최소 6~8주 = 30~40 거래일) ──
+    # 돌파 직전 얼마나 오래 박스권에서 에너지를 모았는지
+    base_days = 0
+    if end_idx > 20:
+        look = min(120, end_idx - 1)
+        sub_c = c[max(0, end_idx - look): end_idx]
+        if len(sub_c) > 10:
+            box_high = float(np.max(sub_c))
+            lower_bound = box_high * 0.80   # 고점 대비 20% 이내 = 박스권
+            for j in range(len(sub_c) - 1, -1, -1):
+                if sub_c[j] >= lower_bound:
+                    base_days += 1
+                else:
+                    break
+    detail["base_days"] = base_days
+
+    # 베이스 기간 가점 (최대 5점, 총 cap 내)
+    if   base_days >= 60: score += 5
+    elif base_days >= 40: score += 4
+    elif base_days >= 30: score += 3
+    elif base_days >= 20: score += 2
+    elif base_days >= 10: score += 1
+
     return min(score, 20), detail
 
 
@@ -511,7 +540,7 @@ def score_breakout_supply(nh):
 # ════════════════════════════════════════════════════════
 # STEP 6  유지력 + RS + Retest
 # ═══════════════════════════════════════════════���════════
-def score_holding_rs(df, nh, index_df=None):
+def score_holding_rs(df, nh, index_df=None, pos_type=None):
     """
     유지력 (George & Hwang: 돌파 후 3일 버팀이 승률 핵심)
     Retest 패턴 (76% 승률 패턴)
@@ -593,6 +622,25 @@ def score_holding_rs(df, nh, index_df=None):
     score += rs_score
     detail["rs_score"] = rs_score
 
+    # ── Fibonacci 조정 깊이 (눌림재돌파형 전용, 최대 5점) ──
+    # O'Neil: 이상적 조정은 38.2% 이내, 얕을수록 강세
+    if pos_type == "PULLBACK_REBREAK":
+        try:
+            look = min(60, len(c) - 1)
+            sub_h_fib = df["High"].values[-look:]
+            sub_l_fib = df["Low"].values[-look:]
+            prior_peak = float(np.max(sub_h_fib))
+            pullback_trough = float(np.min(sub_l_fib))
+            fib_depth = (prior_peak - pullback_trough) / prior_peak if prior_peak > 0 else 1.0
+            detail["fib_depth"] = round(fib_depth * 100, 1)
+
+            if   fib_depth <= 0.236: score += 5   # 매우 얕은 조정
+            elif fib_depth <= 0.382: score += 4   # O'Neil 이상적
+            elif fib_depth <= 0.500: score += 2   # 보통
+            elif fib_depth <= 0.618: score += 1   # 깊음
+        except:
+            pass
+
     return min(score, 25), detail
 
 
@@ -626,6 +674,14 @@ def calc_penalty(df, pos_type):
     # 추세진행형 20일 과속 추가 감점
     if pos_type == "TREND_CONTINUE" and r20 > 32:
         pen+=6; rsn.append(f"20일과속({r20:.0f}%)")
+
+    # MA20 이격도 감점 (너무 멀면 쉬어가는 구간)
+    if "ma20" in df.columns:
+        ma20_v = df["ma20"].iloc[-1]
+        if not pd.isna(ma20_v) and float(ma20_v) > 0:
+            dist_ma20 = (c[-1] / float(ma20_v) - 1) * 100
+            if   dist_ma20 > 30: pen+=8;  rsn.append(f"MA20이격{dist_ma20:.0f}%")
+            elif dist_ma20 > 20: pen+=4;  rsn.append(f"MA20이격{dist_ma20:.0f}%")
 
     return pen, rsn
 
@@ -681,7 +737,7 @@ def analyze_stock(ticker, name, is_korean=True, index_df=None):
         s5, d5 = score_breakout_supply(nh)
 
         # STEP6 유지력+RS
-        s6, d6 = score_holding_rs(df, nh, index_df)
+        s6, d6 = score_holding_rs(df, nh, index_df, pos_type=pos_type)
 
         # 유형 기본 가점
         type_bonus = {"BREAKOUT_BOTTOM":8, "PULLBACK_REBREAK":4, "TREND_CONTINUE":0}[pos_type]
@@ -727,6 +783,9 @@ def analyze_stock(ticker, name, is_korean=True, index_df=None):
             "first_breakout" : nh["first_breakout"],
             "first_vol_surge": nh["first_vol_surge"],
             "retest"         : nh["retest"],
+            "is_ath"         : nh.get("is_ath", False),
+            "base_days"      : d4.get("base_days", 0),
+            "fib_depth"      : d6.get("fib_depth", None),
             "ret_20d"        : round(ret_20d,1),
             "pos_pct"        : round(pos_pct,1),
             "above_30pct"    : above_30,
