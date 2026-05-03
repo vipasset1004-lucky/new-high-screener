@@ -72,10 +72,9 @@ select{
   background:#090e1c;border-bottom:1px solid #1a2540;
   box-shadow:0 2px 12px #00000066;
 }
-.tabs{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.tabs::-webkit-scrollbar{display:none}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px}
 .tab{
-  flex-shrink:0;padding:7px 14px;border-radius:20px;
+  flex:0 0 auto;padding:7px 13px;border-radius:20px;
   font-size:13px;font-weight:700;border:1px solid #1e2d4a;
   background:transparent;color:#6b7a99;cursor:pointer;
   min-height:36px;white-space:nowrap;
