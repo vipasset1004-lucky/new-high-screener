@@ -403,7 +403,7 @@ function show(r,f){
   if(f==='KILLER') return r.first_breakout && r.rvol>=2.0;
   if(f==='RETEST') return r.retest||r.retest_bonus;
   if(f==='ATH')    return r.is_ath===true;
-  if(f==='TOP')    return r.grade==='S'||r.grade==='A+'||r.grade==='A';
+  if(f==='TOP')    return r.grade==='A+'||r.grade==='A';
   if(f==='EARLY')  return r.grade==='B';
   if(f==='CB')     return (r.cb_score||0)>=50;
   return false;
@@ -484,6 +484,7 @@ function card(r){
   if(r.liq_top30)         bdgs+=`<span class="bdg bdg-liq">💧 유동성 상위30%</span>`;
   if(r.above_30pct)       bdgs+=`<span class="bdg bdg-above30">✓ 저점+30%↑</span>`;
   if(r.grade==='B')       bdgs+=`<span class="bdg bdg-early">🔍 초기탐색 — 승률↓ 수익↑</span>`;
+  if(r.is_overheated_warn) bdgs+=`<span class="bdg bdg-counter">⚠️ 과열주의 RSI${r.rsi}${r.rvol>=4?'·RVOL'+r.rvol+'x':''}</span>`;
   const cb=r.cb_score||0;
   if(cb>=70) bdgs+=`<span class="bdg bdg-cb">📡 CB ${cb} — 강한 지속</span>`;
   else if(cb>=50) bdgs+=`<span class="bdg bdg-cb">📡 CB ${cb}</span>`;
@@ -541,7 +542,7 @@ function card(r){
       <div class="card-meta">
         <span class="type-badge ${r.type}">${r.type_emoji} ${r.type_ko}</span>
         <span><a href="https://finance.naver.com/item/main.naver?code=${r.ticker}" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none">${r.ticker}</a></span>
-        <span>${r.days_ago===0?'오늘 신고가':r.days_ago+'일전 신고가'}</span>
+        <span>${r.days_ago===0?'오늘 신고가':'신고가 D+'+r.days_ago}</span>
       </div>
     </div>
     <div class="score-ring ${gcls}">

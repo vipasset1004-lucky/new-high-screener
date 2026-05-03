@@ -1518,13 +1518,10 @@ def fetch_naver_breadth():
 MAX_SCORE = 90   # 3+4+5+6 합계 최대 (25+20+20+25)
 
 def grade(score, pos_type):
-    # 컷오프 55: ATH 보너스 점수 인플레이션 방지 (이전 45→55)
     mins = {"PULLBACK_REBREAK":55, "TREND_CONTINUE":58}
     if score < mins.get(pos_type, 55):
         return "D", "△ 약함"
-    # S≥80 → 백테스트 검증: 실제로 과열 함정 많음 → 경고 등급
-    if   score >= 80: return "S",  "⚠️ 과열경고"
-    elif score >= 70: return "A+", "🎯 CORE"
+    if   score >= 70: return "A+", "🎯 CORE"
     elif score >= 58: return "A",  "👀 WATCH"
     else:             return "B",  "🌱 EARLY"
 
@@ -1626,7 +1623,7 @@ def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, mark
         if g == "D": return None
 
         # PRIME: BULL×ATH — 백테스트 검증 최강 조합 (+5.68%)
-        is_prime = bool(is_ath and market_regime == "BULL" and g in ("S", "A+", "A"))
+        is_prime = bool(is_ath and market_regime == "BULL" and g in ("A+", "A"))
         # PRIME-S: PRIME×A+×(페널티없음 OR RVOL≥2) — 서브라벨로 구분
         # [MAX] pen=0 AND rvol≥2  [Safe] pen=0 AND rvol<2  [eXplosive] rvol≥2 (pen무관)
         _ps_pen0  = (is_prime and g == "A+" and pen == 0)
@@ -1766,6 +1763,9 @@ def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, mark
             "updown_bonus"   : d6.get("updown_bonus", 0),
             "is_prime_s"     : is_prime_s,
             "prime_s_sub"    : prime_s_sub if is_prime_s else None,
+            "is_overheated_warn": bool(
+                rsi > 75 and (nh.get("rvol", 1.0) >= 4.0 or (d6.get("ma20_dist_pct") or 0) > 12.0)
+            ),
             # ── Phase 3: 매매 규칙 (등급별 차등) ────────────────
             # PRIME-S/PRIME: 풀 사이즈, -7% 손절
             # CORE(A+):      1/2 사이즈, -7% 손절
@@ -1936,14 +1936,13 @@ def post_process_results(results):
              r.get("is_sector_leader"))
         )
 
-    # 최종 재정렬: PRIME-S → PRIME → CORE(A+) → WATCH(A) → EARLY(B) → 과열경고(S)
+    # 최종 재정렬: PRIME-S → PRIME → CORE(A+) → WATCH(A) → EARLY(B)
     def _sort_key(x):
         if x.get("is_prime_s"):        tier = 0
         elif x.get("is_prime"):        tier = 1
         elif x.get("grade") == "A+":   tier = 2
         elif x.get("grade") == "A":    tier = 3
-        elif x.get("grade") == "B":    tier = 4
-        else:                           tier = 5   # S(경고)
+        else:                           tier = 4   # B
         return (tier, -x["score"])
     results.sort(key=_sort_key)
 
