@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>신고가 지속 스크리너</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: #080c14;
+    color: #e1e5ee;
+    min-height: 100vh;
+  }
+
+  /* ── 헤더 ── */
+  .header {
+    background: linear-gradient(135deg, #0a0f1e 0%, #111827 100%);
+    border-bottom: 1px solid #1a2540;
+    padding: 16px;
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 2px;
+  }
+  .header .sub {
+    font-size: 11px;
+    color: #6b7a99;
+    margin-bottom: 14px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  select, button {
+    background: #111827;
+    border: 1px solid #2a3555;
+    color: #c8d0e0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='6'%3E%3Cpath d='M0 0l6 6 6-6z' fill='%236b7a99'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  .btn-scan {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    grid-column: 1 / -1;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  .btn-scan:active { opacity: .85; }
+  .btn-scan:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── 상태바 ── */
+  .status-bar {
+    background: #0a0f1e;
+    border-bottom: 1px solid #1a2540;
+    padding: 10px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: #6b7a99;
+  }
+  .status-bar .stat { display: flex; align-items: center; gap: 4px; }
+  .status-bar .stat .val { color: #f59e0b; font-weight: 600; }
+
+  /* ── 진행바 ── */
+  .progress-wrap {
+    background: #0a0f1e;
+    padding: 10px 16px;
+    display: none;
+  }
+  .progress-wrap.active { display: block; }
+  .progress-bar-bg {
+    background: #1a2540;
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    border-radius: 4px;
+    transition: width .3s ease;
+    width: 0%;
+  }
+  .progress-text {
+    font-size: 11px;
+    color: #6b7a99;
+  }
+
+  /* ── 필터 탭 ── */
+  .filter-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #0a0f1e;
+    border-bottom: 1px solid #1a2540;
+    overflow-x: auto;
+  }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #2a3555;
+    background: transparent;
+    color: #8896b3;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab-btn.active {
+    background: linear-gradient(135deg, #f59e0b22, #ef444422);
+    border-color: #f59e0b;
+    color: #f59e0b;
+  }
+
+  /* ── 카드 ── */
+  .main { padding: 12px; }
+  .cards { display: flex; flex-direction: column; gap: 10px; }
+  .empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: #6b7a99;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
+  .card {
+    background: #0e1525;
+    border: 1px solid #1a2540;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .card:active { border-color: #f59e0b44; }
+
+  /* 유형별 좌측 컬러바 */
+  .card.type-START { border-left: 3px solid #f59e0b; }
+  .card.type-MIDDLE { border-left: 3px solid #3b82f6; }
+
+  .card-top {
+    padding: 12px 14px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .card-left { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #f0f4ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-meta {
+    font-size: 11px;
+    color: #6b7a99;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* 유형 배지 */
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .type-badge.START { background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+  .type-badge.MIDDLE { background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; }
+
+  /* 점수 원형 */
+  .score-circle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 10px;
+    border: 2px solid;
+  }
+  .score-circle.grade-A { border-color: #f59e0b; background: #f59e0b15; }
+  .score-circle.grade-B { border-color: #3b82f6; background: #3b82f615; }
+  .score-circle.grade-C { border-color: #6b7a99; background: #6b7a9915; }
+  .score-num { font-size: 17px; font-weight: 800; line-height: 1; }
+  .grade-A .score-num { color: #f59e0b; }
+  .grade-B .score-num { color: #60a5fa; }
+  .grade-C .score-num { color: #8896b3; }
+  .grade-label-sm { font-size: 9px; color: #6b7a99; margin-top: 1px; }
+
+  /* 신호 행 */
+  .signal-row {
+    padding: 0 14px 10px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .sig {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #141e35;
+    border: 1px solid #1e2e4a;
+  }
+  .sig.on { border-color: #22c55e44; color: #4ade80; background: #22c55e12; }
+  .sig.warn { border-color: #ef444444; color: #f87171; background: #ef444412; }
+  .sig.neutral { color: #94a3b8; }
+
+  /* 수치 그리드 */
+  .metrics {
+    padding: 8px 14px 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .metric {
+    background: #0a0f1e;
+    border-radius: 8px;
+    padding: 7px 6px;
+    text-align: center;
+  }
+  .metric-label { font-size: 10px; color: #6b7a99; margin-bottom: 3px; }
+  .metric-val { font-size: 14px; font-weight: 700; color: #e1e5ee; }
+  .metric-val.good { color: #4ade80; }
+  .metric-val.warn { color: #f87171; }
+  .metric-val.accent { color: #f59e0b; }
+
+  /* 52주 범위 바 */
+  .range-bar-wrap {
+    padding: 4px 14px 12px;
+  }
+  .range-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #6b7a99;
+    margin-bottom: 4px;
+  }
+  .range-bg {
+    background: #1a2540;
+    border-radius: 4px;
+    height: 6px;
+    position: relative;
+    overflow: visible;
+  }
+  .range-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #f59e0b);
+    border-radius: 4px;
+    max-width: 100%;
+  }
+  .range-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    border: 2px solid #f59e0b;
+  }
+
+  /* 점수 상세 바 */
+  .score-detail {
+    padding: 0 14px 12px;
+    display: none;
+  }
+  .card.expanded .score-detail { display: block; }
+  .detail-title {
+    font-size: 11px;
+    color: #6b7a99;
+    margin-bottom: 8px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .detail-name { font-size: 11px; color: #8896b3; width: 80px; flex-shrink: 0; }
+  .detail-bar-bg {
+    flex: 1;
+    height: 5px;
+    background: #1a2540;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .detail-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+  .detail-val { font-size: 11px; color: #8896b3; width: 30px; text-align: right; flex-shrink: 0; }
+
+  /* 스캔 중 스켈레톤 */
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #0e1525 25%, #151f35 50%, #0e1525 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔥 신고가 지속 스크리너</h1>
+  <p class="sub">신고가 후 계속 오를 종목만 추출 · 수렴·돌파강도·유지력 복합 분석</p>
+  <div class="controls">
+    <select id="selMarket">
+      <option value="KR">KOSPI+KOSDAQ</option>
+      <option value="KOSPI">KOSPI</option>
+      <option value="KOSDAQ">KOSDAQ</option>
+    </select>
+    <select id="selTopN">
+      <option value="100">상위 100종목</option>
+      <option value="150" selected>상위 150종목</option>
+      <option value="200">상위 200종목</option>
+    </select>
+    <button class="btn-scan" id="btnScan" onclick="startScan()">🔍 신고가 스캔 시작</button>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <div class="stat">스캔일시 <span class="val" id="scanDate">-</span></div>
+  <div class="stat">발견 <span class="val" id="totalFound">-</span></div>
+  <div class="stat">🚀시작형 <span class="val" id="cntStart">-</span></div>
+  <div class="stat">📈중간형 <span class="val" id="cntMiddle">-</span></div>
+</div>
+
+<div class="progress-wrap" id="progressWrap">
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-text" id="progressText">준비 중...</div>
+</div>
+
+<div class="filter-tabs">
+  <button class="tab-btn active" data-type="ALL" onclick="filterCards(this,'ALL')">전체</button>
+  <button class="tab-btn" data-type="START" onclick="filterCards(this,'START')">🚀 추세시작형</button>
+  <button class="tab-btn" data-type="MIDDLE" onclick="filterCards(this,'MIDDLE')">📈 추세중간형</button>
+  <button class="tab-btn" data-grade="A" onclick="filterCards(this,'GRADE_A')">🔥 최강만</button>
+</div>
+
+<div class="main">
+  <div class="cards" id="cards">
+    <div class="empty" id="emptyMsg">
+      스캔 버튼을 눌러 신고가 종목 분석을 시작하세요.<br>
+      <span style="font-size:12px;color:#4a5568;margin-top:6px;display:block">
+        수렴 → 돌파강도 → 유지력 순서로 점수를 계산합니다
+      </span>
+    </div>
+  </div>
+</div>
+
+<script>
+let allResults = [];
+let currentFilter = 'ALL';
+const API_BASE = window.location.origin;
+
+// ── 초기 로드 ──
+window.addEventListener('load', () => {
+  fetch(API_BASE + '/api/cached-results')
+    .then(r => r.json())
+    .then(data => {
+      if (data.results && data.results.length > 0) {
+        allResults = data.results;
+        renderCards(allResults);
+        updateStatusBar(data);
+      }
+    })
+    .catch(() => {});
+});
+
+// ── 스캔 시작 ──
+function startScan() {
+  const market = document.getElementById('selMarket').value;
+  const topN = document.getElementById('selTopN').value;
+  const btn = document.getElementById('btnScan');
+
+  btn.disabled = true;
+  btn.textContent = '스캔 중...';
+  document.getElementById('progressWrap').classList.add('active');
+  document.getElementById('emptyMsg') && (document.getElementById('emptyMsg').style.display = 'none');
+  document.getElementById('cards').innerHTML = '';
+
+  allResults = [];
+  let es = new EventSource(`${API_BASE}/api/scan?market=${market}&top_n=${topN}`);
+
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'progress') {
+      const pct = msg.progress || 0;
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressText').textContent =
+        `${msg.index}/${msg.total} 분석 중... (${msg.current}) | 발견: ${msg.found}개`;
+
+    } else if (msg.type === 'result') {
+      allResults.push(msg.data);
+      appendCard(msg.data);
+
+    } else if (msg.type === 'done') {
+      es.close();
+      allResults = msg.results || allResults;
+      renderCards(allResults);
+      updateStatusBar({ scan_date: msg.scan_date, total_found: msg.total });
+      document.getElementById('progressFill').style.width = '100%';
+      document.getElementById('progressText').textContent = `완료! ${msg.total}개 종목 발견`;
+      setTimeout(() => document.getElementById('progressWrap').classList.remove('active'), 2000);
+      btn.disabled = false;
+      btn.textContent = '🔍 신고가 스캔 시작';
+
+    } else if (msg.type === 'error') {
+      es.close();
+      alert(msg.message);
+      btn.disabled = false;
+      btn.textContent = '🔍 신고가 스캔 시작';
+      document.getElementById('progressWrap').classList.remove('active');
+
+    } else if (msg.type === 'status') {
+      document.getElementById('progressFill').style.width = (msg.progress || 0) + '%';
+      document.getElementById('progressText').textContent = msg.message;
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    btn.disabled = false;
+    btn.textContent = '🔍 신고가 스캔 시작';
+    document.getElementById('progressWrap').classList.remove('active');
+  };
+}
+
+// ── 카드 렌더링 ──
+function renderCards(results) {
+  const container = document.getElementById('cards');
+  if (!results || results.length === 0) {
+    container.innerHTML = `<div class="empty">조건에 맞는 종목이 없습니다.<br><span style="font-size:12px;color:#4a5568">스캔 범위를 늘리거나 다시 스캔해보세요.</span></div>`;
+    return;
+  }
+  const filtered = filterResults(results, currentFilter);
+  container.innerHTML = filtered.map(r => buildCard(r)).join('');
+  updateCounts(results);
+}
+
+function appendCard(r) {
+  const container = document.getElementById('cards');
+  const emptyMsg = document.getElementById('emptyMsg');
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  if (currentFilter === 'ALL' ||
+      currentFilter === r.type ||
+      (currentFilter === 'GRADE_A' && r.grade === 'A')) {
+    container.insertAdjacentHTML('afterbegin', buildCard(r));
+  }
+}
+
+function filterResults(results, filter) {
+  if (filter === 'ALL') return results;
+  if (filter === 'START') return results.filter(r => r.type === 'START');
+  if (filter === 'MIDDLE') return results.filter(r => r.type === 'MIDDLE');
+  if (filter === 'GRADE_A') return results.filter(r => r.grade === 'A');
+  return results;
+}
+
+function filterCards(btn, type) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = type;
+  renderCards(allResults);
+}
+
+// ── 카드 HTML 생성 ──
+function buildCard(r) {
+  const gradeClass = `grade-${r.grade}`;
+  const typeClass = `type-${r.type}`;
+
+  // 신호 생성
+  const signals = [];
+  if (r.has_convergence) signals.push({ label: '🔺 수렴', cls: 'on' });
+  if (r.price_held) signals.push({ label: '📌 가격유지', cls: 'on' });
+  if (r.volume_dried) signals.push({ label: '📉 거래량↓', cls: 'on' });
+  if (r.above_ma5) signals.push({ label: '5선위', cls: 'on' });
+  if (r.rvol >= 2.0) signals.push({ label: `거래대금 ${r.rvol.toFixed(1)}x`, cls: 'on' });
+  else if (r.rvol >= 1.5) signals.push({ label: `거래대금 ${r.rvol.toFixed(1)}x`, cls: 'neutral' });
+  if (r.ma_level >= 4) signals.push({ label: '4단 정배열', cls: 'on' });
+  else if (r.ma_level >= 3) signals.push({ label: '3단 정배열', cls: 'on' });
+  if (r.rsi > 75) signals.push({ label: `RSI ${r.rsi}`, cls: 'warn' });
+
+  const sigHtml = signals.map(s =>
+    `<span class="sig ${s.cls}">${s.label}</span>`
+  ).join('');
+
+  // RSI 색상
+  const rsiClass = r.rsi > 75 ? 'warn' : r.rsi > 60 ? 'accent' : 'good';
+
+  // 점수 상세 바
+  const sd = r.score_detail || {};
+  const bars = [
+    { name: '위치점수', val: sd.position || 0, max: 15, color: '#8b5cf6' },
+    { name: '수렴강도', val: sd.convergence || 0, max: 25, color: '#f59e0b' },
+    { name: '돌파거래대금', val: sd.breakout_volume || 0, max: 20, color: '#ef4444' },
+    { name: '유지력', val: sd.holding || 0, max: 25, color: '#22c55e' },
+    { name: 'MA정배열', val: sd.ma_alignment || 0, max: 10, color: '#3b82f6' },
+  ];
+  const detailHtml = bars.map(b => {
+    const pct = Math.max(0, Math.min(100, (b.val / b.max) * 100));
+    return `<div class="detail-row">
+      <span class="detail-name">${b.name}</span>
+      <div class="detail-bar-bg">
+        <div class="detail-bar-fill" style="width:${pct}%;background:${b.color}"></div>
+      </div>
+      <span class="detail-val">${b.val}</span>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="card ${typeClass}" onclick="toggleExpand(this)">
+    <div class="card-top">
+      <div class="card-left">
+        <div class="card-name">${r.name}</div>
+        <div class="card-meta">
+          <span class="type-badge ${r.type}">${r.type_emoji} ${r.type_ko}</span>
+          <span>${r.ticker}</span>
+          <span>신고가 ${r.days_ago === 0 ? '오늘' : r.days_ago + '일전'}</span>
+        </div>
+      </div>
+      <div class="score-circle ${gradeClass}">
+        <span class="score-num">${r.score}</span>
+        <span class="grade-label-sm">${r.grade_label}</span>
+      </div>
+    </div>
+
+    <div class="signal-row">${sigHtml}</div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">현재가</div>
+        <div class="metric-val accent">${Number(r.current_price).toLocaleString()}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">RSI</div>
+        <div class="metric-val ${rsiClass}">${r.rsi}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ADX</div>
+        <div class="metric-val ${r.adx > 25 ? 'good' : 'neutral'}">${r.adx}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">RVOL</div>
+        <div class="metric-val ${r.rvol >= 1.5 ? 'good' : 'neutral'}">${r.rvol}x</div>
+      </div>
+    </div>
+
+    <div class="range-bar-wrap">
+      <div class="range-label">
+        <span>52주저 ${Number(r.low_52w).toLocaleString()}</span>
+        <span style="color:#f59e0b">현재위치 ${r.position_in_range}%</span>
+        <span>52주고 ${Number(r.high_52w).toLocaleString()}</span>
+      </div>
+      <div class="range-bg">
+        <div class="range-fill" style="width:${r.position_in_range}%"></div>
+        <div class="range-dot" style="left:${r.position_in_range}%"></div>
+      </div>
+    </div>
+
+    <div class="score-detail">
+      <div class="detail-title">점수 구성</div>
+      ${detailHtml}
+      ${sd.penalty < 0 ? `<div class="detail-row"><span class="detail-name" style="color:#f87171">과열감점</span><div class="detail-bar-bg"><div class="detail-bar-fill" style="width:${Math.min(100,Math.abs(sd.penalty)/25*100)}%;background:#ef4444"></div></div><span class="detail-val" style="color:#f87171">${sd.penalty}</span></div>` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleExpand(el) {
+  el.classList.toggle('expanded');
+}
+
+// ── 상태바 업데이트 ──
+function updateStatusBar(data) {
+  if (data.scan_date) {
+    const d = new Date(data.scan_date);
+    document.getElementById('scanDate').textContent =
+      d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
+  }
+  document.getElementById('totalFound').textContent = (data.total_found || 0) + '개';
+  updateCounts(allResults);
+}
+
+function updateCounts(results) {
+  const starts = results.filter(r => r.type === 'START').length;
+  const middles = results.filter(r => r.type === 'MIDDLE').length;
+  document.getElementById('cntStart').textContent = starts + '개';
+  document.getElementById('cntMiddle').textContent = middles + '개';
+}
+</script>
+</body>
+</html>
