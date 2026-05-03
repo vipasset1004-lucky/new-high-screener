@@ -536,10 +536,10 @@ function card(r){
   ${bdgHtml}
   <div class="card-top">
     <div class="card-left">
-      <div class="card-name">${r.name}</div>
+      <div class="card-name"><a href="https://finance.naver.com/item/main.naver?code=${r.ticker}" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none">${r.name}</a></div>
       <div class="card-meta">
         <span class="type-badge ${r.type}">${r.type_emoji} ${r.type_ko}</span>
-        <span>${r.ticker}</span>
+        <span><a href="https://finance.naver.com/item/main.naver?code=${r.ticker}" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none">${r.ticker}</a></span>
         <span>${r.days_ago===0?'오늘 신고가':r.days_ago+'일전 신고가'}</span>
       </div>
     </div>
