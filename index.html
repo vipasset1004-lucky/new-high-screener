@@ -764,16 +764,17 @@ function updateStat(d){
   counts(all);
 }
 
+function setCnt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 function counts(r){
-  document.getElementById('cntAll').textContent=r.length;
-  document.getElementById('cntBB').textContent=r.filter(x=>x.type==='BREAKOUT_BOTTOM').length;
-  document.getElementById('cntPR').textContent=r.filter(x=>x.type==='PULLBACK_REBREAK').length;
-  document.getElementById('cntTC').textContent=r.filter(x=>x.type==='TREND_CONTINUE').length;
-  document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
-  document.getElementById('cntEntry').textContent=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
-  document.getElementById('cntRS').textContent=r.filter(x=>x.rs_top20===true).length;
+  setCnt('cntAll',r.length);
+  setCnt('cntBB',r.filter(x=>x.type==='BREAKOUT_BOTTOM').length);
+  setCnt('cntPR',r.filter(x=>x.type==='PULLBACK_REBREAK').length);
+  setCnt('cntTC',r.filter(x=>x.type==='TREND_CONTINUE').length);
+  setCnt('cntK',r.filter(x=>x.first_breakout&&x.rvol>=2.0).length);
+  setCnt('cntEntry',r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length);
+  setCnt('cntRS',r.filter(x=>x.rs_top20===true).length);
   const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&(x.candle_score||0)<=1&&(x.gap_pct||0)>-3).length;
-  document.getElementById('cntTB').textContent=tbCnt;
+  setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');
   if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
   const coilCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&(x.base_days||0)>=2&&Math.abs(x.ma20_dist_pct||99)<=12).length;
