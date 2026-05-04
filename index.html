@@ -423,7 +423,7 @@ function startScan(){
   all=[];
   let es=new EventSource(`${API}/api/scan?top_n=${topN}&min_score=${minS}&include_new=${inclNew}`);
   es.onmessage=e=>{
-    const m=JSON.parse(e.data);
+    const m=JSON.parse(e.data.replace(/\bNaN\b/g,'null'));
     if(m.type==='progress'){
       document.getElementById('progFill').style.width=(m.progress||0)+'%';
       document.getElementById('progTxt').textContent=`${m.index}/${m.total} · ${m.current} | 발견: ${m.found}개`;
