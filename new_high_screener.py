@@ -629,24 +629,6 @@ def get_dynamic_universe(min_mktcap=100_000_000_000, min_vol=3_000_000_000):
 
 
 # ── 데이터 수집 ────────────────────────────────────────
-def _patch_latest_with_fdr(df, ticker):
-    """yfinance 마지막 행 Close=NaN이면 FDR로 최근 1주 데이터 보완"""
-    try:
-        if pd.isna(df["Close"].iloc[-1]):
-            import FinanceDataReader as fdr
-            since = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-            fdr_df = fdr.DataReader(ticker, since)
-            if fdr_df is not None and len(fdr_df) > 0:
-                fdr_df = fdr_df[["Open","High","Low","Close","Volume"]].dropna()
-                # yfinance 마지막 날짜 이후 FDR 데이터만 이어붙임
-                new_rows = fdr_df[fdr_df.index > df.dropna(subset=["Close"]).index[-1]]
-                if len(new_rows) > 0:
-                    df = df.dropna(subset=["Close","Volume"])
-                    df = pd.concat([df, new_rows])
-    except Exception:
-        pass
-    return df
-
 def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
     suffixes = [".KS", ".KQ"] if is_korean else [""]
     for sfx in suffixes:
@@ -658,7 +640,6 @@ def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
             if df is None or len(df) < 120: continue
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
-            df = _patch_latest_with_fdr(df, ticker)
             df = df.dropna(subset=["Close","Volume"])
             if df["Close"].iloc[-1] <= 0: continue
             return df
