@@ -68,7 +68,7 @@ select{
   padding:5px 6px;border-right:1px solid #1a2540;
   width:25%;box-sizing:border-box;
 }
-.stat:nth-child(4),.stat:last-child{border-right:none}
+.stat:nth-child(4n),.stat:last-child{border-right:none}
 .stat-lbl{font-size:12px;color:#4a5a7a;margin-bottom:3px;white-space:nowrap}
 .stat-val{font-size:20px;font-weight:800;color:#f59e0b;line-height:1}
 .stat.clickable{cursor:pointer;transition:background .15s}
@@ -265,6 +265,24 @@ body.ops-mode .ops-banner{display:block}
 .legend-body.open{display:block}
 .leg{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:#8896b3;padding:5px 0}
 .leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px}
+
+/* ── 모바일 반응형 ── */
+@media(max-width:400px){
+  .header h1{font-size:20px}
+  .controls-row{grid-template-columns:1fr 1fr}
+  select{font-size:14px;padding:0 28px 0 10px;height:44px}
+  .tab{font-size:13px;padding:8px 12px}
+  .card-name{font-size:19px}
+  .stat-val{font-size:17px}
+  .stat-prime-val{font-size:22px}
+  .score-ring{width:60px;height:60px}
+  .s-num{font-size:20px}
+  .metric-val{font-size:17px}
+}
+@media(max-width:360px){
+  .controls-row{grid-template-columns:1fr}
+  select{font-size:15px}
+}
 </style>
 </head>
 <body>
@@ -279,7 +297,7 @@ body.ops-mode .ops-banner{display:block}
         <option value="300" selected>상위 300종목</option>
         <option value="450">상위 450종목</option>
         <option value="538">전체 538종목</option>
-        <option value="auto">🔄 자동 유니버스 (매일 21시 갱신)</option>
+        <option value="auto">🔄 자동 유니버스</option>
       </select>
       <select id="selMin">
         <option value="40">최소 40점</option>
