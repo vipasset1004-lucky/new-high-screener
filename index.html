@@ -71,6 +71,13 @@ select{
 .stat:nth-child(4),.stat:last-child{border-right:none}
 .stat-lbl{font-size:12px;color:#4a5a7a;margin-bottom:3px;white-space:nowrap}
 .stat-val{font-size:20px;font-weight:800;color:#f59e0b;line-height:1}
+.stat.clickable{cursor:pointer;transition:background .15s}
+.stat.clickable:hover{background:#1a2540}
+.stat.clickable:active{background:#222f4a}
+.stat-prime.clickable{cursor:pointer;transition:background .15s}
+.stat-prime.clickable:hover{background:#1a2540}
+.stat.sf-active{background:#f59e0b18;border-bottom:2px solid #f59e0b}
+.stat-prime.sf-active{background:#f59e0b18;border-bottom:2px solid #ff8c00}
 /* ── PRIME 전용 두번째 줄 ── */
 .status-bar-prime{
   background:linear-gradient(90deg,#0f1a2e,#0a0f1e);
@@ -292,17 +299,17 @@ body.ops-mode .ops-banner{display:block}
 
 <div class="status-bar">
   <div class="stat"><div class="stat-lbl">스캔일시</div><div class="stat-val" id="scanDate" style="font-size:12px;color:#6b7a99;font-weight:600">-</div></div>
-  <div class="stat"><div class="stat-lbl">전체</div><div class="stat-val" id="cntAll">-</div></div>
-  <div class="stat"><div class="stat-lbl">🏔️ 바닥</div><div class="stat-val" id="cntBB">-</div></div>
-  <div class="stat"><div class="stat-lbl">💎 눌림</div><div class="stat-val" id="cntPR">-</div></div>
-  <div class="stat"><div class="stat-lbl">📈 추세</div><div class="stat-val" id="cntTC">-</div></div>
-  <div class="stat"><div class="stat-lbl">⚡ 킬러</div><div class="stat-val" id="cntK">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'ALL')" title="전체 보기"><div class="stat-lbl">전체</div><div class="stat-val" id="cntAll">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'BREAKOUT_BOTTOM')" title="바닥탈출형만 보기"><div class="stat-lbl">🏔️ 바닥</div><div class="stat-val" id="cntBB">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'PULLBACK_REBREAK')" title="눌림재돌파형만 보기"><div class="stat-lbl">💎 눌림</div><div class="stat-val" id="cntPR">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'TREND_CONTINUE')" title="추세진행형만 보기"><div class="stat-lbl">📈 추세</div><div class="stat-val" id="cntTC">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'KILLER')" title="킬러필터만 보기"><div class="stat-lbl">⚡ 킬러</div><div class="stat-val" id="cntK">-</div></div>
   <div class="stat"><div class="stat-lbl">📊 확산도</div><div class="stat-val" id="cntBreadth" style="font-size:13px">-</div></div>
   <div class="stat"><div class="stat-lbl">🌐 市新高</div><div class="stat-val" id="cntNaver" style="font-size:13px">-</div></div>
 </div>
 <div class="status-bar status-bar-prime">
-  <div class="stat-prime"><div class="stat-prime-lbl">🔥 PRIME-S</div><div class="stat-prime-val" id="cntPS">-</div></div>
-  <div class="stat-prime"><div class="stat-prime-lbl">🚀 PRIME</div><div class="stat-prime-val" id="cntPM" style="color:#fbbf24">-</div></div>
+  <div class="stat-prime clickable" onclick="statFlt(this,'PRIME_S')" title="PRIME-S만 보기"><div class="stat-prime-lbl">🔥 PRIME-S</div><div class="stat-prime-val" id="cntPS">-</div></div>
+  <div class="stat-prime clickable" onclick="statFlt(this,'PRIME')" title="PRIME 이상 보기"><div class="stat-prime-lbl">🚀 PRIME</div><div class="stat-prime-val" id="cntPM" style="color:#fbbf24">-</div></div>
   <div class="stat-prime" style="flex:2;border-right:none"><div class="stat-prime-lbl">오늘의 최우선 신호</div><div class="stat-prime-val" id="cntPrimeDesc" style="font-size:13px;color:#6b7a99;font-weight:600">스캔 후 표시</div></div>
 </div>
 
@@ -398,20 +405,30 @@ function startScan(){
 }
 
 function show(r,f){
-  if(f==='ALL')    return true;
-  if(f===r.type)   return true;
-  if(f==='KILLER') return r.first_breakout && r.rvol>=2.0;
-  if(f==='RETEST') return r.retest||r.retest_bonus;
-  if(f==='ATH')    return r.is_ath===true;
-  if(f==='TOP')    return r.grade==='A+'||r.grade==='A';
-  if(f==='EARLY')  return r.grade==='B';
-  if(f==='CB')     return (r.cb_score||0)>=50;
+  if(f==='ALL')     return true;
+  if(f===r.type)    return true;
+  if(f==='KILLER')  return r.first_breakout && r.rvol>=2.0;
+  if(f==='RETEST')  return r.retest||r.retest_bonus;
+  if(f==='ATH')     return r.is_ath===true;
+  if(f==='TOP')     return r.grade==='A+'||r.grade==='A';
+  if(f==='EARLY')   return r.grade==='B';
+  if(f==='CB')      return (r.cb_score||0)>=50;
+  if(f==='PRIME_S') return r.is_prime_s===true;
+  if(f==='PRIME')   return r.is_prime_s===true||r.is_prime===true;
   return false;
 }
 
 function flt(btn,type){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.stat.sf-active,.stat-prime.sf-active').forEach(b=>b.classList.remove('sf-active'));
   btn.classList.add('active'); cf=type; render(all);
+  document.querySelector('.main').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function statFlt(el,type){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.stat.sf-active,.stat-prime.sf-active').forEach(b=>b.classList.remove('sf-active'));
+  el.classList.add('sf-active'); cf=type; render(all);
   document.querySelector('.main').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
