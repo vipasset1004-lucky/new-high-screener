@@ -28,12 +28,20 @@ class NumpyJSONProvider(DefaultJSONProvider):
 def _np_default(o):
     if isinstance(o, np.bool_):    return bool(o)
     if isinstance(o, np.integer):  return int(o)
-    if isinstance(o, np.floating): return float(o)
+    if isinstance(o, np.floating): return None if (o != o) else float(o)
     if isinstance(o, np.ndarray):  return o.tolist()
     raise TypeError(f"{type(o)} not serializable")
 
+import math as _math
+def _sanitize(obj):
+    if isinstance(obj, float) and (_math.isnan(obj) or _math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):  return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):  return [_sanitize(v) for v in obj]
+    return obj
+
 def _dumps(obj):
-    return json.dumps(obj, ensure_ascii=False, default=_np_default)
+    return json.dumps(_sanitize(obj), ensure_ascii=False, default=_np_default)
 
 from new_high_screener import (
     get_fallback_tickers, get_dynamic_universe, analyze_stock, fetch_index,
@@ -71,18 +79,23 @@ def _key_to_path(key):
     return {CACHE_KEY: CACHE_PATH, CACHE_PREV_KEY: CACHE_PREV_PATH,
             UNIVERSE_KEY: UNIVERSE_PATH}.get(key, CACHE_PATH)
 
+import re as _re
+def _safe_loads(s):
+    if isinstance(s, bytes): s = s.decode("utf-8", errors="replace")
+    return json.loads(_re.sub(r'\bNaN\b', 'null', s))
+
 def _cache_get(key):
     if _redis:
         try:
             val = _redis.get(key)
-            return json.loads(val) if val else None
+            return _safe_loads(val) if val else None
         except Exception as e:
             print(f"[cache] get 오류: {e}")
     path = _key_to_path(key)
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                return _safe_loads(f.read())
         except:
             pass
     return None
