@@ -125,6 +125,7 @@ select{
 .tab.entry-tab.active{background:#22c55e22;border-color:#22c55e88;color:#4ade80}
 .tab.rs-tab.active{background:#f59e0b22;border-color:#f59e0b88;color:#fbbf24}
 .tab.buy-tab.active{background:#ef444422;border-color:#ef444488;color:#f87171}
+.tab.coil-tab.active{background:#8b5cf622;border-color:#8b5cf688;color:#c4b5fd}
 
 /* ── 카드 리스트 ── */
 .main{padding:12px 12px 8px}
@@ -363,6 +364,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능</button>
     <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS)</button>
     <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')">🎯 내일매수 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
+    <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
 
@@ -474,6 +476,16 @@ function show(r,f){
     if((r.rvol||0) < 1.5) return false;
     // 7. 갭 과열 제거: 당일 갭 5% 초과 = 다음날 되돌림 위험
     if((r.gap_pct||0) > 5) return false;
+    return true;
+  }
+  if(f==='COILING'){
+    // 고가응축: 3~5일 후 상승 준비 종목 (백테스트 5일 승률 69.6%)
+    if(!(r.is_prime_s||r.is_prime)) return false;
+    if(!r.rs_top20) return false;
+    if(!r.price_held) return false;
+    if(!r.vol_dried) return false;
+    if((r.base_days||0) < 3) return false;
+    if(Math.abs(r.ma20_dist_pct||99) > 8) return false;
     return true;
   }
   return false;
@@ -770,6 +782,9 @@ function counts(r){
   document.getElementById('cntTB').textContent=tbCnt;
   const tabTBEl=document.getElementById('tabTBCnt');
   if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
+  const coilCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&x.vol_dried===true&&(x.base_days||0)>=3&&Math.abs(x.ma20_dist_pct||99)<=8).length;
+  const tabCoilEl=document.getElementById('tabCoilCnt');
+  if(tabCoilEl){tabCoilEl.textContent=coilCnt;tabCoilEl.style.background=coilCnt>=2?'#8b5cf644':coilCnt>=1?'#8b5cf633':'#1a2540';tabCoilEl.style.color=coilCnt>=1?'#c4b5fd':'#4a5a7a';}
   const ps=r.filter(x=>x.is_prime_s).length;
   const pm=r.filter(x=>x.is_prime&&!x.is_prime_s).length;
   const psEl=document.getElementById('cntPS');
