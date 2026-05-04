@@ -459,7 +459,7 @@ function show(r,f){
   if(f==='PRIME')      return r.is_prime_s===true||r.is_prime===true;
   if(f==='ENTRY')      return r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY';
   if(f==='RS_LEADER')  return r.rs_top20===true;
-  if(f==='TOMORROW_BUY') return (r.is_prime_s||r.is_prime)&&(r.entry_action==='STRONG_BUY'||r.entry_action==='BUY')&&(r.type==='BREAKOUT_BOTTOM'||r.type==='PULLBACK_REBREAK')&&r.rs_top20===true;
+  if(f==='TOMORROW_BUY') return (r.is_prime_s||r.is_prime)&&(r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY')&&(r.type==='BREAKOUT_BOTTOM'||r.type==='PULLBACK_REBREAK')&&r.rs_top20===true;
   return false;
 }
 
@@ -742,7 +742,7 @@ function counts(r){
   document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
   document.getElementById('cntEntry').textContent=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
   document.getElementById('cntRS').textContent=r.filter(x=>x.rs_top20===true).length;
-  document.getElementById('cntTB').textContent=r.filter(x=>(x.is_prime_s||x.is_prime)&&(x.entry_action==='STRONG_BUY'||x.entry_action==='BUY')&&(x.type==='BREAKOUT_BOTTOM'||x.type==='PULLBACK_REBREAK')&&x.rs_top20===true).length;
+  document.getElementById('cntTB').textContent=r.filter(x=>(x.is_prime_s||x.is_prime)&&(x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY')&&(x.type==='BREAKOUT_BOTTOM'||x.type==='PULLBACK_REBREAK')&&x.rs_top20===true).length;
   const ps=r.filter(x=>x.is_prime_s).length;
   const pm=r.filter(x=>x.is_prime&&!x.is_prime_s).length;
   const psEl=document.getElementById('cntPS');
