@@ -459,7 +459,23 @@ function show(r,f){
   if(f==='PRIME')      return r.is_prime_s===true||r.is_prime===true;
   if(f==='ENTRY')      return r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY';
   if(f==='RS_LEADER')  return r.rs_top20===true;
-  if(f==='TOMORROW_BUY') return (r.is_prime_s||r.is_prime)&&(r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY')&&(r.type==='BREAKOUT_BOTTOM'||r.type==='PULLBACK_REBREAK')&&r.rs_top20===true;
+  if(f==='TOMORROW_BUY'){
+    // 1. PRIME 퀄리티 (기본 필터)
+    if(!(r.is_prime_s||r.is_prime)) return false;
+    // 2. 패턴: 바닥돌파 또는 눌림재돌파만 (추세지속은 제외)
+    if(!(r.type==='BREAKOUT_BOTTOM'||r.type==='PULLBACK_REBREAK')) return false;
+    // 3. 진입 신호 있어야
+    if(!(r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY')) return false;
+    // 4. RS 주도주 (상대강도 상위20%)
+    if(!r.rs_top20) return false;
+    // 5. 캔들 퀄리티 ≥ 2: 종가 일중 고점 근처 → 다음날 상승 모멘텀 핵심 지표
+    if((r.candle_score||0) < 2) return false;
+    // 6. 거래량 동반 확인 (rvol ≥ 1.5)
+    if((r.rvol||0) < 1.5) return false;
+    // 7. 갭 과열 제거: 당일 갭 5% 초과 = 다음날 되돌림 위험
+    if((r.gap_pct||0) > 5) return false;
+    return true;
+  }
   return false;
 }
 
@@ -507,7 +523,15 @@ function opsFilter(r){
 function render(results){
   let filtered = results.filter(r=>show(r,cf));
   if(opsMode) filtered = filtered.filter(opsFilter);
-  filtered.sort((a,b)=>b.score-a.score);
+  if(cf==='TOMORROW_BUY'){
+    // 내일매수 전용 정렬: 캔들퀄리티 > 거래량 > RS강도 > 진입점수
+    filtered.sort((a,b)=>{
+      const tbScore=r=>((r.candle_score||0)*30)+Math.min((r.rvol||0),5)*12+((r.rs_rank_pct||0)*0.5)+((r.entry_score||0)*0.3)+(r.is_prime_s?10:0);
+      return tbScore(b)-tbScore(a);
+    });
+  } else {
+    filtered.sort((a,b)=>b.score-a.score);
+  }
   const c=document.getElementById('cards');
   if(!filtered.length){
     const msg = opsMode
@@ -742,7 +766,7 @@ function counts(r){
   document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
   document.getElementById('cntEntry').textContent=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
   document.getElementById('cntRS').textContent=r.filter(x=>x.rs_top20===true).length;
-  document.getElementById('cntTB').textContent=r.filter(x=>(x.is_prime_s||x.is_prime)&&(x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY')&&(x.type==='BREAKOUT_BOTTOM'||x.type==='PULLBACK_REBREAK')&&x.rs_top20===true).length;
+  document.getElementById('cntTB').textContent=r.filter(x=>(x.is_prime_s||x.is_prime)&&(x.type==='BREAKOUT_BOTTOM'||x.type==='PULLBACK_REBREAK')&&(x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY')&&x.rs_top20===true&&(x.candle_score||0)>=2&&(x.rvol||0)>=1.5&&(x.gap_pct||0)<=5).length;
   const ps=r.filter(x=>x.is_prime_s).length;
   const pm=r.filter(x=>x.is_prime&&!x.is_prime_s).length;
   const psEl=document.getElementById('cntPS');
