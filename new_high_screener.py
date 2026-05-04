@@ -655,10 +655,13 @@ def fetch_index(symbol="^KS11", days=400):
         start = datetime.now() - timedelta(days=days + 60)
         df = yf.download(symbol, start=start, end=datetime.now(),
                          auto_adjust=True, progress=False, timeout=10)
-        if df is None or len(df) < 60:
+        if df is None or len(df) == 0:
             return None
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
+        df = df.dropna(subset=["Close"])
+        if len(df) < 200:
+            return None
         _index_cache[symbol] = df
         return df
     except:
@@ -714,7 +717,9 @@ def get_market_regime(index_df):
     """
     if index_df is None or len(index_df) < 200:
         return "NEUTRAL"
-    c = index_df["Close"].values
+    c = index_df["Close"].dropna().values
+    if len(c) < 200:
+        return "NEUTRAL"
     ma200 = float(np.mean(c[-200:]))
     ma50  = float(np.mean(c[-50:]))
     ret20 = (c[-1] / c[-20] - 1) * 100 if len(c) >= 20 else 0
