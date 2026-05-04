@@ -309,7 +309,10 @@ body.ops-mode .ops-banner{display:block}
       <input type="checkbox" id="chkNew">
       <label for="chkNew">🆕 신규상장 종목 포함 (KRX 자동수집)</label>
     </div>
-    <button class="btn-scan" id="btnScan" onclick="startScan()">🔍 신고가 위치 분석 시작</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn-scan" id="btnScan" onclick="startScan()" style="flex:1">🔍 신고가 위치 분석 시작</button>
+      <button id="btnReset" onclick="resetScan()" title="스캔 초기화" style="background:#1a2540;border:1.5px solid #2a3a5a;color:#6b7a99;border-radius:12px;font-size:13px;font-weight:700;padding:0 14px;cursor:pointer;white-space:nowrap;transition:all .2s">↺ 초기화</button>
+    </div>
   </div>
 </div>
 
@@ -390,6 +393,17 @@ window.addEventListener('load',()=>{
   fetch(API+'/api/cached-results').then(r=>r.json())
     .then(d=>{ if(d.results?.length){all=d.results;render(all);updateStat(d);} }).catch(()=>{});
 });
+
+function resetScan(){
+  fetch(API+'/api/reset-scan').then(r=>r.json()).then(()=>{
+    const btn=document.getElementById('btnScan');
+    btn.disabled=false; btn.textContent='🔍 신고가 위치 분석 시작';
+    document.getElementById('progWrap').classList.remove('on');
+    const rb=document.getElementById('btnReset');
+    rb.textContent='✓ 초기화됨'; rb.style.color='#4ade80';
+    setTimeout(()=>{rb.textContent='↺ 초기화';rb.style.color='#6b7a99';},2000);
+  });
+}
 
 function startScan(){
   const topN=document.getElementById('selN').value;
