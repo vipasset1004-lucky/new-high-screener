@@ -629,7 +629,45 @@ def get_dynamic_universe(min_mktcap=100_000_000_000, min_vol=3_000_000_000):
 
 
 # ── 데이터 수집 ────────────────────────────────────────
+import urllib.request as _urlreq
+import ast as _ast
+
+def _fetch_naver_chart(symbol, days):
+    """네이버 금융 차트 API — 종목/지수 공통. OHLCV + 외국인 소진율 반환."""
+    end   = datetime.now()
+    start = end - timedelta(days=days + 60)
+    url = (f"https://api.finance.naver.com/siseJson.naver"
+           f"?symbol={symbol}&requestType=1"
+           f"&startTime={start.strftime('%Y%m%d')}"
+           f"&endTime={end.strftime('%Y%m%d')}"
+           f"&timeframe=day")
+    try:
+        req = _urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with _urlreq.urlopen(req, timeout=15) as r:
+            text = r.read().decode("utf-8").strip()
+        data = _ast.literal_eval(text)  # [헤더, ...rows]
+        if not data or len(data) < 2:
+            return None
+        rows = data[1:]
+        df = pd.DataFrame(rows, columns=["Date","Open","High","Low","Close","Volume","ForeignPct"])
+        df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d")
+        df = df.set_index("Date")
+        for col in ["Open","High","Low","Close","Volume","ForeignPct"]:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+        df = df.dropna(subset=["Close","Volume"])
+        # 거래정지일 제거: 네이버는 거래정지일에 Open=High=Low=Volume=0, Close만 직전종가로 채움
+        df = df[(df["Open"] > 0) & (df["High"] > 0) & (df["Low"] > 0) & (df["Close"] > 0)]
+        return df if len(df) > 0 else None
+    except Exception:
+        return None
+
 def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
+    # 한국 종목: 네이버 우선 (휴장일/EOD 지연 없음, 외국인 보유율 보너스)
+    if is_korean:
+        df = _fetch_naver_chart(str(ticker).zfill(6), days)
+        if df is not None and len(df) >= 120:
+            return df
+    # Fallback: yfinance (미국 종목 또는 네이버 실패 시)
     suffixes = [".KS", ".KQ"] if is_korean else [""]
     for sfx in suffixes:
         try:
@@ -647,10 +685,19 @@ def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
     return None
 
 # KOSPI 지수 (RS 계산용) ─ 한 번만 다운로드하고 캐시
+_INDEX_NAVER_MAP = {"^KS11": "KOSPI", "^KQ11": "KOSDAQ"}
 _index_cache = {}
 def fetch_index(symbol="^KS11", days=400):
     if symbol in _index_cache:
         return _index_cache[symbol]
+    # 한국 지수: 네이버 우선
+    naver_sym = _INDEX_NAVER_MAP.get(symbol)
+    if naver_sym:
+        df = _fetch_naver_chart(naver_sym, days)
+        if df is not None and len(df) >= 200:
+            _index_cache[symbol] = df
+            return df
+    # Fallback: yfinance
     try:
         start = datetime.now() - timedelta(days=days + 60)
         df = yf.download(symbol, start=start, end=datetime.now(),
