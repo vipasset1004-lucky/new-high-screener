@@ -479,13 +479,12 @@ function show(r,f){
     return true;
   }
   if(f==='COILING'){
-    // 고가응축: 3~5일 후 상승 준비 종목 (백테스트 5일 승률 69.6%)
+    // 고가응축: 3~5일 후 상승 준비 종목
     if(!(r.is_prime_s||r.is_prime)) return false;
     if(!r.rs_top20) return false;
     if(!r.price_held) return false;
-    if(!r.vol_dried) return false;
-    if((r.base_days||0) < 3) return false;
-    if(Math.abs(r.ma20_dist_pct||99) > 8) return false;
+    if((r.base_days||0) < 2) return false;
+    if(Math.abs(r.ma20_dist_pct||99) > 12) return false;
     return true;
   }
   return false;
@@ -782,7 +781,7 @@ function counts(r){
   document.getElementById('cntTB').textContent=tbCnt;
   const tabTBEl=document.getElementById('tabTBCnt');
   if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
-  const coilCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&x.vol_dried===true&&(x.base_days||0)>=3&&Math.abs(x.ma20_dist_pct||99)<=8).length;
+  const coilCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&(x.base_days||0)>=2&&Math.abs(x.ma20_dist_pct||99)<=12).length;
   const tabCoilEl=document.getElementById('tabCoilCnt');
   if(tabCoilEl){tabCoilEl.textContent=coilCnt;tabCoilEl.style.background=coilCnt>=2?'#8b5cf644':coilCnt>=1?'#8b5cf633':'#1a2540';tabCoilEl.style.color=coilCnt>=1?'#c4b5fd':'#4a5a7a';}
   const ps=r.filter(x=>x.is_prime_s).length;
