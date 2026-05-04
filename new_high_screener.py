@@ -593,6 +593,50 @@ def get_fallback_tickers(top_n=150):
     return out[:top_n]
 
 
+def get_dynamic_universe(min_mktcap=100_000_000_000, min_vol=3_000_000_000):
+    """pykrx로 KRX 전종목 중 시총 1,000억+ AND 거래대금 30억+ 필터링
+    Returns list of {"ticker":..., "name":..., "themes":["자동수집"]}
+    """
+    try:
+        from pykrx import stock as krx
+        today = datetime.now().strftime("%Y%m%d")
+
+        # 시가총액 + 거래대금 (KOSPI + KOSDAQ 한 번에)
+        frames = []
+        for market in ["KOSPI", "KOSDAQ"]:
+            df = krx.get_market_cap_by_ticker(today, market=market)
+            df["market"] = market
+            frames.append(df)
+        cap_df = pd.concat(frames)
+        cap_df.index.name = "ticker"
+
+        # 필터: 시총 AND 거래대금
+        filtered = cap_df[
+            (cap_df["시가총액"] >= min_mktcap) &
+            (cap_df["거래대금"] >= min_vol) &
+            (cap_df["거래대금"] > 0)
+        ]
+
+        # 이름 빠르게 조회 — 큐레이션 리스트 먼저, 나머지만 pykrx
+        curated_names = {t["ticker"]: t["name"] for t in get_fallback_tickers(9999)}
+
+        result = []
+        for code in filtered.index:
+            name = curated_names.get(code)
+            if not name:
+                try:
+                    name = krx.get_market_ticker_name(code)
+                except Exception:
+                    name = code
+            result.append({"ticker": code, "name": name, "themes": ["자동수집"]})
+
+        print(f"[dynamic_universe] {today} 기준 {len(result)}종목 수집 완료")
+        return result
+    except Exception as e:
+        print(f"[dynamic_universe] 오류: {e}")
+        return []
+
+
 # ── 데이터 수집 ────────────────────────────────────────
 def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
     suffixes = [".KS", ".KQ"] if is_korean else [""]

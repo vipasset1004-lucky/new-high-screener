@@ -36,9 +36,9 @@ def _dumps(obj):
     return json.dumps(obj, ensure_ascii=False, default=_np_default)
 
 from new_high_screener import (
-    get_fallback_tickers, analyze_stock, fetch_index, get_market_regime,
-    post_process_results, fetch_naver_breadth, enrich_with_predict,
-    check_gap_at_open, calculate_entry_score, add_entry_scores,
+    get_fallback_tickers, get_dynamic_universe, analyze_stock, fetch_index,
+    get_market_regime, post_process_results, fetch_naver_breadth,
+    enrich_with_predict, check_gap_at_open, calculate_entry_score, add_entry_scores,
 )
 
 app = Flask(__name__)
@@ -60,10 +60,16 @@ except Exception as e:
 
 CACHE_KEY      = "newhigh:cache"
 CACHE_PREV_KEY = "newhigh:cache_prev"
+UNIVERSE_KEY   = "newhigh:universe"
 CACHE_TTL      = 60 * 60 * 48
 CACHE_PATH      = "newhigh_cache.json"
 CACHE_PREV_PATH = "newhigh_cache_prev.json"
+UNIVERSE_PATH   = "newhigh_universe.json"
 
+
+def _key_to_path(key):
+    return {CACHE_KEY: CACHE_PATH, CACHE_PREV_KEY: CACHE_PREV_PATH,
+            UNIVERSE_KEY: UNIVERSE_PATH}.get(key, CACHE_PATH)
 
 def _cache_get(key):
     if _redis:
@@ -72,7 +78,7 @@ def _cache_get(key):
             return json.loads(val) if val else None
         except Exception as e:
             print(f"[cache] get 오류: {e}")
-    path = CACHE_PATH if key == CACHE_KEY else CACHE_PREV_PATH
+    path = _key_to_path(key)
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -89,7 +95,7 @@ def _cache_set(key, value):
             return
         except Exception as e:
             print(f"[cache] set 오류: {e}")
-    path = CACHE_PATH if key == CACHE_KEY else CACHE_PREV_PATH
+    path = _key_to_path(key)
     try:
         with open(path, "w", encoding="utf-8") as f:
             f.write(_dumps(value))
@@ -98,6 +104,41 @@ def _cache_set(key, value):
 
 
 scan_state = {"running": False}
+
+
+def get_merged_universe():
+    """큐레이션 538 + 동적 유니버스(캐시) 합집합 반환"""
+    curated = get_fallback_tickers(9999)
+    curated_codes = {t["ticker"] for t in curated}
+
+    cached = _cache_get(UNIVERSE_KEY)
+    dynamic = cached.get("tickers", []) if isinstance(cached, dict) else []
+
+    merged = list(curated)
+    for t in dynamic:
+        if t["ticker"] not in curated_codes:
+            merged.append(t)
+
+    return merged
+
+
+def refresh_dynamic_universe():
+    """매일 20:50 — KRX 유니버스 갱신 후 캐시 저장"""
+    print(f"[20:50 유니버스] 갱신 시작: {datetime.now()}")
+    try:
+        tickers = get_dynamic_universe()
+        if tickers:
+            _cache_set(UNIVERSE_KEY, {
+                "updated_at": datetime.now().isoformat(),
+                "count": len(tickers),
+                "tickers": tickers,
+            })
+            merged = get_merged_universe()
+            print(f"[20:50 유니버스] 완료 → 동적 {len(tickers)}개 / 합산 {len(merged)}개")
+        else:
+            print("[20:50 유니버스] 결과 없음 — 큐레이션 유지")
+    except Exception as e:
+        print(f"[20:50 유니버스] 오류: {e}")
 
 
 @app.route("/")
@@ -123,12 +164,40 @@ def get_results():
     return jsonify({"results": [], "scan_date": None})
 
 
+@app.route("/api/reset-scan", methods=["POST", "GET"])
+def reset_scan():
+    scan_state["running"] = False
+    return jsonify({"ok": True, "message": "스캔 상태 초기화 완료"})
+
+
+@app.route("/api/universe-status")
+def universe_status():
+    cached = _cache_get(UNIVERSE_KEY)
+    if cached and isinstance(cached, dict):
+        merged = get_merged_universe()
+        return jsonify({
+            "updated_at": cached.get("updated_at"),
+            "dynamic_count": cached.get("count", 0),
+            "merged_count": len(merged),
+        })
+    curated = get_fallback_tickers(9999)
+    return jsonify({"updated_at": None, "dynamic_count": 0, "merged_count": len(curated)})
+
+
+@app.route("/api/universe-refresh", methods=["POST", "GET"])
+def universe_refresh():
+    threading.Thread(target=refresh_dynamic_universe, daemon=True).start()
+    return jsonify({"ok": True, "message": "유니버스 갱신 시작"})
+
+
 @app.route("/api/scan")
 def scan():
     import queue as _queue
     market = request.args.get("market", "KR")
-    top_n = int(request.args.get("top_n", "150"))
+    top_n_raw = request.args.get("top_n", "150")
     min_score = float(request.args.get("min_score", "40"))
+    use_auto = (top_n_raw == "auto")
+    top_n = 9999 if use_auto else int(top_n_raw)
 
     if scan_state["running"]:
         def already_running():
@@ -141,7 +210,7 @@ def scan():
         scan_state["running"] = True
         results = []
         try:
-            tickers = get_fallback_tickers(top_n)
+            tickers = get_merged_universe() if use_auto else get_fallback_tickers(top_n)
             total = len(tickers)
 
             msg_queue.put({'type': 'status', 'message': f'{total}개 종목 신고가 분석 시작', 'progress': 2, 'total': total})
@@ -268,7 +337,7 @@ def auto_scan_full():
     scan_state["running"] = True
     results = []
     try:
-        tickers  = get_fallback_tickers(500)
+        tickers  = get_merged_universe()
         index_df = fetch_index("^KS11")
         market_regime = get_market_regime(index_df)
 
@@ -399,8 +468,9 @@ def auto_scan_quick():
 
 
 scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Seoul"))
-scheduler.add_job(auto_scan_full,  "cron", hour=21, minute=0,  id="scan_full")
-scheduler.add_job(auto_scan_quick, "cron", hour=7,  minute=0,  id="scan_quick")
+scheduler.add_job(refresh_dynamic_universe, "cron", hour=20, minute=50, id="universe_update")
+scheduler.add_job(auto_scan_full,           "cron", hour=21, minute=0,  id="scan_full")
+scheduler.add_job(auto_scan_quick,          "cron", hour=7,  minute=0,  id="scan_quick")
 scheduler.start()
 
 
