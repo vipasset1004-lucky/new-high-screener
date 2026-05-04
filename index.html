@@ -362,7 +362,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab" onclick="flt(this,'CB')">📡 CB 추적</button>
     <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능</button>
     <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS)</button>
-    <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')">🎯 내일매수</button>
+    <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')">🎯 내일매수 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
 
@@ -766,7 +766,10 @@ function counts(r){
   document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
   document.getElementById('cntEntry').textContent=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
   document.getElementById('cntRS').textContent=r.filter(x=>x.rs_top20===true).length;
-  document.getElementById('cntTB').textContent=r.filter(x=>(x.is_prime_s||x.is_prime)&&(x.type==='BREAKOUT_BOTTOM'||x.type==='PULLBACK_REBREAK')&&(x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY')&&x.rs_top20===true&&(x.candle_score||0)>=2&&(x.rvol||0)>=1.5&&(x.gap_pct||0)<=5).length;
+  const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&(x.type==='BREAKOUT_BOTTOM'||x.type==='PULLBACK_REBREAK')&&(x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY')&&x.rs_top20===true&&(x.candle_score||0)>=2&&(x.rvol||0)>=1.5&&(x.gap_pct||0)<=5).length;
+  document.getElementById('cntTB').textContent=tbCnt;
+  const tabTBEl=document.getElementById('tabTBCnt');
+  if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
   const ps=r.filter(x=>x.is_prime_s).length;
   const pm=r.filter(x=>x.is_prime&&!x.is_prime_s).length;
   const psEl=document.getElementById('cntPS');
