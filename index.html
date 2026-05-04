@@ -123,6 +123,7 @@ select{
 .tab.tt.active{background:#22c55e22;border-color:#22c55e88;color:#4ade80}
 .tab.tr.active{background:#8b5cf622;border-color:#8b5cf688;color:#a78bfa}
 .tab.entry-tab.active{background:#22c55e22;border-color:#22c55e88;color:#4ade80}
+.tab.rs-tab.active{background:#f59e0b22;border-color:#f59e0b88;color:#fbbf24}
 
 /* ── 카드 리스트 ── */
 .main{padding:12px 12px 8px}
@@ -306,6 +307,7 @@ body.ops-mode .ops-banner{display:block}
   <div class="stat clickable" onclick="statFlt(this,'TREND_CONTINUE')" title="추세진행형만 보기"><div class="stat-lbl">📈 추세</div><div class="stat-val" id="cntTC">-</div></div>
   <div class="stat clickable" onclick="statFlt(this,'KILLER')" title="킬러필터만 보기"><div class="stat-lbl">⚡ 킬러</div><div class="stat-val" id="cntK">-</div></div>
   <div class="stat clickable" onclick="statFlt(this,'ENTRY')" title="진입 가능 종목만 보기"><div class="stat-lbl">🟢 진입가능</div><div class="stat-val" id="cntEntry" style="color:#22c55e">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'RS_LEADER')" title="RS 상위 20% 주도주만 보기"><div class="stat-lbl">🏅 주도주</div><div class="stat-val" id="cntRS" style="color:#fbbf24">-</div></div>
   <div class="stat"><div class="stat-lbl">📊 확산도</div><div class="stat-val" id="cntBreadth" style="font-size:13px">-</div></div>
   <div class="stat"><div class="stat-lbl">🌐 市新高</div><div class="stat-val" id="cntNaver" style="font-size:13px">-</div></div>
 </div>
@@ -335,6 +337,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab" onclick="flt(this,'EARLY')">🔍 초기탐색(B)</button>
     <button class="tab" onclick="flt(this,'CB')">📡 CB 추적</button>
     <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능</button>
+    <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS)</button>
   </div>
 </div>
 
@@ -416,9 +419,10 @@ function show(r,f){
   if(f==='TOP')     return r.grade==='A+'||r.grade==='A';
   if(f==='EARLY')   return r.grade==='B';
   if(f==='CB')      return (r.cb_score||0)>=50;
-  if(f==='PRIME_S') return r.is_prime_s===true;
-  if(f==='PRIME')   return r.is_prime_s===true||r.is_prime===true;
-  if(f==='ENTRY')   return r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY';
+  if(f==='PRIME_S')    return r.is_prime_s===true;
+  if(f==='PRIME')      return r.is_prime_s===true||r.is_prime===true;
+  if(f==='ENTRY')      return r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY';
+  if(f==='RS_LEADER')  return r.rs_top20===true;
   return false;
 }
 
@@ -700,6 +704,7 @@ function counts(r){
   document.getElementById('cntTC').textContent=r.filter(x=>x.type==='TREND_CONTINUE').length;
   document.getElementById('cntK').textContent=r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
   document.getElementById('cntEntry').textContent=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
+  document.getElementById('cntRS').textContent=r.filter(x=>x.rs_top20===true).length;
   const ps=r.filter(x=>x.is_prime_s).length;
   const pm=r.filter(x=>x.is_prime&&!x.is_prime_s).length;
   const psEl=document.getElementById('cntPS');
