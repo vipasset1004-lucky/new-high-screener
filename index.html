@@ -278,7 +278,9 @@ body.ops-mode .ops-banner{display:block}
 
 /* ── 모바일 반응형 ── */
 @media(max-width:600px){
-  .tab{font-size:13px;padding:7px 11px}
+  .tab{font-size:12px;padding:8px 6px;flex:1 1 calc(33.333% - 4px);min-width:0;text-align:center;justify-content:center;display:flex;align-items:center;gap:3px}
+  .tcnt{font-size:10px;padding:1px 5px;margin-left:3px}
+  .tabs{gap:4px;padding:6px 8px}
 }
 @media(max-width:400px){
   .header h1{font-size:20px}
@@ -290,10 +292,13 @@ body.ops-mode .ops-banner{display:block}
   .score-ring{width:60px;height:60px}
   .s-num{font-size:20px}
   .metric-val{font-size:17px}
+  .tab{font-size:11px;padding:7px 4px}
 }
 @media(max-width:360px){
   .controls-row{grid-template-columns:1fr}
   select{font-size:15px}
+  .tab{font-size:10px}
+  .tcnt{font-size:9px;padding:1px 4px}
 }
 </style>
 </head>
