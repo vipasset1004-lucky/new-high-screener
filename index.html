@@ -410,7 +410,7 @@ const API=window.location.origin;
 
 window.addEventListener('load',()=>{
   fetch(API+'/api/cached-results').then(r=>r.json())
-    .then(d=>{ if(d.results?.length){all=d.results;render(all);updateStat(d);} }).catch(()=>{});
+    .then(d=>{ if(d && d.results && d.results.length){all=d.results;render(all);updateStat(d);} }).catch(()=>{});
 });
 
 function resetScan(){
@@ -477,30 +477,28 @@ function show(r,f){
   if(f==='RS_LEADER')  return r.rs_top20===true;
   if(f==='TOMORROW_BUY'){
     // v2: 검증된 단기(10일) 알파 — PRIME + 페널티없음 + PULLBACK 재돌파형
-    // 백테스트 116건: 10일 승률 61.2% (baseline 51.1%, +10.1%p), 평균 +3.55%, +5%도달 38.8%
-    if(!(r.is_prime_s||r.is_prime)) return false;        // PRIME 등급
-    if(r.type !== 'PULLBACK_REBREAK') return false;       // 풀백 재돌파형만
-    if((r.score_detail?.penalty || 0) !== 0) return false;// 페널티 없음 (-pen 음수, 0이면 OK)
-    if((r.rsi || 0) >= 75) return false;                  // 과열 안전장치
+    if(!(r.is_prime_s||r.is_prime)) return false;
+    if(r.type !== 'PULLBACK_REBREAK') return false;
+    var sd = r.score_detail || {};
+    if((sd.penalty || 0) !== 0) return false;
+    if((r.rsi || 0) >= 75) return false;
     return true;
   }
   if(f==='MULTIBAGGER'){
     return (r.multibagger_score||0) >= 60;
   }
   if(f==='STAGE2'){
-    // Weinstein Stage 2 - 본격 상승 단계 (매수 단계)
-    return (r.weinstein?.stage === 'Stage2') || (r.weinstein?.transition === true);
+    var w1 = r.weinstein || {};
+    return (w1.stage === 'Stage2') || (w1.transition === true);
   }
   if(f==='GOLDEN'){
-    // 🌟 황금매수: Stage 2 EARLY (ma150 +0~15%) + Stage 1→2 전환 — 진짜 매수 시점만 압축
-    return (r.weinstein?.stage === 'Stage2' && r.weinstein?.sub === 'early')
-        || (r.weinstein?.transition === true);
+    var w2 = r.weinstein || {};
+    return (w2.stage === 'Stage2' && w2.sub === 'early') || (w2.transition === true);
   }
   if(f==='TOP_PICK'){
-    // 🏆 최우선: 🌟 황금매수 ∩ 🚀 5배 후보 GOOD (교집합)
-    const isGolden = (r.weinstein?.stage === 'Stage2' && r.weinstein?.sub === 'early')
-                  || (r.weinstein?.transition === true);
-    const isMB = (r.multibagger_score||0) >= 60;
+    var w3 = r.weinstein || {};
+    var isGolden = (w3.stage === 'Stage2' && w3.sub === 'early') || (w3.transition === true);
+    var isMB = (r.multibagger_score || 0) >= 60;
     return isGolden && isMB;
   }
   if(f==='COILING'){
@@ -686,7 +684,7 @@ function card(r){
   const baseTxt=vd.base_days>0?` · 베이스 ${vd.base_days}일(${Math.round(vd.base_days/5)}주)`:'';
   const vcpTxt=`수축 ${vd.progressive_price||0}회 · 거래량수축 ${vd.progressive_vol||0}회${vd.vol_dryup?' · 드라이업✓':''}${baseTxt}`;
   const fibTxt=r.fib_depth!=null?`피보나치 조정: ${r.fib_depth}%${r.fib_depth<=38.2?' ✓ 이상적':r.fib_depth<=50?' 보통':' 깊음'}`:'';
-  const penHtml=(sd.penalty_rsn?.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(' · ')} (${sd.penalty}점)</div>`:'';
+  const penHtml=(sd.penalty_rsn && sd.penalty_rsn.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(' · ')} (${sd.penalty}점)</div>`:'';
   const bonusHtml=sd.type_bonus>0?`<div class="drow"><span class="dname" style="color:#f59e0b">유형보너스</span><div class="dbg"><div class="dfill" style="width:${sd.type_bonus/10*100}%;background:#f59e0b"></div></div><span class="dval cg">+${sd.type_bonus}</span></div>`:'';
 
   return `
@@ -873,21 +871,22 @@ function counts(r){
   const tabMBEl = document.getElementById('tabMBCnt');
   if(tabMBEl){tabMBEl.textContent=cMB;tabMBEl.classList.toggle('has', cMB>0);}
   // Stage 2 카운트
-  const cS2 = r.filter(x=>x.weinstein?.stage==='Stage2'||x.weinstein?.transition===true).length;
+  const cS2 = r.filter(function(x){var w=x.weinstein||{};return w.stage==='Stage2'||w.transition===true;}).length;
   const tabS2El = document.getElementById('tabS2Cnt');
   if(tabS2El){tabS2El.textContent=cS2;tabS2El.classList.toggle('has', cS2>0);}
-  // 🌟 황금매수 카운트 (Stage 2 early + Transition)
-  const cGold = r.filter(x=>(x.weinstein?.stage==='Stage2'&&x.weinstein?.sub==='early')||x.weinstein?.transition===true).length;
+  // 🌟 황금매수 카운트
+  const cGold = r.filter(function(x){var w=x.weinstein||{};return (w.stage==='Stage2'&&w.sub==='early')||w.transition===true;}).length;
   const tabGoldEl = document.getElementById('tabGoldCnt');
   if(tabGoldEl){tabGoldEl.textContent=cGold;tabGoldEl.classList.toggle('has', cGold>0);}
-  // 🏆 최우선 카운트 (황금매수 ∩ 멀티배거 GOOD)
-  const cTop = r.filter(x=>{
-    const g=(x.weinstein?.stage==='Stage2'&&x.weinstein?.sub==='early')||x.weinstein?.transition===true;
+  // 🏆 최우선 카운트 (교집합)
+  const cTopPick = r.filter(function(x){
+    var w=x.weinstein||{};
+    var g=(w.stage==='Stage2'&&w.sub==='early')||w.transition===true;
     return g && (x.multibagger_score||0)>=60;
   }).length;
   const tabTopEl2 = document.getElementById('tabTopCnt2');
-  if(tabTopEl2){tabTopEl2.textContent=cTop;tabTopEl2.classList.toggle('has', cTop>0);}
-  const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((x.score_detail?.penalty||0)===0)&&((x.rsi||0)<75)).length;
+  if(tabTopEl2){tabTopEl2.textContent=cTopPick;tabTopEl2.classList.toggle('has', cTopPick>0);}
+  const tbCnt=r.filter(function(x){var sd=x.score_detail||{};return (x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((sd.penalty||0)===0)&&((x.rsi||0)<75);}).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');
   if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
