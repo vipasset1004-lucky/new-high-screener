@@ -326,9 +326,21 @@ body.ops-mode .ops-banner{display:block}
       <input type="checkbox" id="chkNew">
       <label for="chkNew">🆕 신규상장 종목 포함 (KRX 자동수집)</label>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-scan" id="btnScan" onclick="startScan()" style="flex:1">🔍 신고가 위치 분석 시작</button>
-      <button id="btnReset" onclick="resetScan()" title="스캔 초기화" style="background:#1a2540;border:1.5px solid #2a3a5a;color:#6b7a99;border-radius:12px;font-size:13px;font-weight:700;padding:0 14px;cursor:pointer;white-space:nowrap;transition:all .2s">↺ 초기화</button>
+    <!-- 자동 스캔 안내 + 카운트다운 -->
+    <div id="autoScanInfo" style="background:linear-gradient(135deg,#1a2540,#0d1829);border:1px solid #2a3a5a;border-radius:12px;padding:14px 16px;margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:13px;color:#6b7a99;margin-bottom:3px">📊 자동 스캔 운영</div>
+          <div style="font-size:15px;color:#fcd34d;font-weight:700">16:00 (정규장 종가) · 21:00 (시간외 후, 다음날 매수용)</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#6b7a99">다음 스캔까지</div>
+          <div id="nextScanCountdown" style="font-size:18px;color:#22d3ee;font-weight:800;font-family:monospace">--:--:--</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px" id="adminScanWrap">
+      <button class="btn-scan" id="btnScan" onclick="startScan()" style="flex:1;display:none">🔍 신고가 위치 분석 시작 (관리자)</button>
     </div>
   </div>
 </div>
@@ -413,10 +425,57 @@ body.ops-mode .ops-banner{display:block}
 let all=[], cf='ALL';
 const API=window.location.origin;
 
+// URL에 ?admin=KEY 있으면 관리자 모드 (수동 스캔 버튼 노출)
+const urlParams = new URLSearchParams(window.location.search);
+const ADMIN_KEY = urlParams.get('admin') || '';
+
 window.addEventListener('load',()=>{
   fetch(API+'/api/cached-results').then(r=>r.json())
     .then(d=>{ if(d && d.results && d.results.length){all=d.results;render(all);updateStat(d);} }).catch(()=>{});
+  // 관리자 모드면 수동 스캔 버튼 표시
+  if(ADMIN_KEY){
+    const sb = document.getElementById('btnScan');
+    if(sb){ sb.style.display='block'; }
+  }
+  // 다음 자동 스캔 카운트다운 시작
+  startCountdown();
 });
+
+function startCountdown(){
+  const el = document.getElementById('nextScanCountdown');
+  if(!el) return;
+  function tick(){
+    const now = new Date();
+    // 다음 16:00 또는 21:00 (KST) — 사용자 로컬시간이 KST라고 가정
+    const targets = [16, 21];
+    let next = null;
+    for(const h of targets){
+      const t = new Date(now);
+      t.setHours(h, 0, 0, 0);
+      if(t > now){ next = t; break; }
+    }
+    if(!next){
+      // 오늘 둘 다 지남 → 내일 16:00
+      next = new Date(now);
+      next.setDate(next.getDate()+1);
+      next.setHours(16, 0, 0, 0);
+    }
+    const diff = next - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    // 자동 스캔 시간 ±2분 안에 들어가면 30초 후 자동 새로고침
+    if(h===0 && m<2){
+      setTimeout(()=>location.reload(), 30000);
+    }
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// startScan: 관리자 모드면 admin key 추가
+const _originalStartScan = null;
 
 function resetScan(){
   fetch(API+'/api/reset-scan').then(r=>r.json()).then(()=>{
@@ -438,7 +497,7 @@ function startScan(){
   document.getElementById('progWrap').classList.add('on');
   document.getElementById('cards').innerHTML='';
   all=[];
-  let es=new EventSource(`${API}/api/scan?top_n=${topN}&min_score=${minS}&include_new=${inclNew}`);
+  let es=new EventSource(`${API}/api/scan?top_n=${topN}&min_score=${minS}&include_new=${inclNew}&admin=${encodeURIComponent(ADMIN_KEY)}`);
   es.onmessage=e=>{
     const m=JSON.parse(e.data.replace(/\bNaN\b/g,'null'));
     if(m.type==='progress'){

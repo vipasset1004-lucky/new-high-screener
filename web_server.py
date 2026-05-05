@@ -211,9 +211,18 @@ def universe_refresh():
     return jsonify({"ok": True, "message": "유니버스 갱신 시작"})
 
 
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "vipasset1004")  # 관리자 키 (환경변수 또는 기본값)
+
 @app.route("/api/scan")
 def scan():
     import queue as _queue
+    # 관리자 모드만 수동 스캔 가능 (일반 사용자는 자동 스캔만)
+    admin = request.args.get("admin", "")
+    if admin != ADMIN_KEY:
+        def blocked():
+            yield f"data: {_dumps({'type': 'error', 'message': '수동 스캔 비활성. 자동 스캔: 16:00, 21:00 (KST)'})}\n\n"
+        return Response(blocked(), mimetype="text/event-stream")
+
     market = request.args.get("market", "KR")
     top_n_raw = request.args.get("top_n", "150")
     min_score = float(request.args.get("min_score", "40"))
@@ -539,9 +548,13 @@ def auto_scan_quick():
 
 
 scheduler = BackgroundScheduler(timezone=pytz.timezone("Asia/Seoul"))
-scheduler.add_job(refresh_dynamic_universe, "cron", hour=20, minute=50, id="universe_update")
-scheduler.add_job(auto_scan_full,           "cron", hour=21, minute=0,  id="scan_full")
-scheduler.add_job(auto_scan_quick,          "cron", hour=7,  minute=0,  id="scan_quick")
+# 16:00 — 정규장 종가 직후 (당일 종가 반영)
+scheduler.add_job(refresh_dynamic_universe, "cron", hour=15, minute=50, id="universe_pm")
+scheduler.add_job(auto_scan_full,           "cron", hour=16, minute=0,  id="scan_pm")
+# 21:00 — 시간외 단일가 종료 후 (외국인/기관 매매 반영, 다음날 매수 결정)
+scheduler.add_job(refresh_dynamic_universe, "cron", hour=20, minute=50, id="universe_evening")
+scheduler.add_job(auto_scan_full,           "cron", hour=21, minute=0,  id="scan_evening")
+# 기존 07:00 퀵스캔 제거 — 21:00 결과로 다음날 매수 결정 충분
 scheduler.start()
 
 
