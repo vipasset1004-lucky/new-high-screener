@@ -563,10 +563,34 @@ function render(results){
   let filtered = results.filter(r=>show(r,cf));
   if(opsMode) filtered = filtered.filter(opsFilter);
   if(cf==='TOMORROW_BUY'){
-    // 눌림 반등형 정렬: RS강도 > 가격유지 > base_days > PRIME-S
     filtered.sort((a,b)=>{
       const s=r=>((r.rs_rank_pct||0)*0.8)+(r.is_prime_s?20:0)+((r.base_days||0)*1.5)+((r.cb_score||0)*0.2);
       return s(b)-s(a);
+    });
+  } else if(cf==='GOLDEN' || cf==='TOP_PICK' || cf==='STAGE2'){
+    // 황금매수/최우선/Stage2: 1순위 Stage 2 early > 2순위 transition > 3순위 mb 점수 > 4순위 ma150 거리 작은 순
+    filtered.sort(function(a,b){
+      var wa=a.weinstein||{}, wb=b.weinstein||{};
+      var aEarly=(wa.stage==='Stage2'&&wa.sub==='early')?1:0;
+      var bEarly=(wb.stage==='Stage2'&&wb.sub==='early')?1:0;
+      if(aEarly!==bEarly) return bEarly-aEarly;
+      var aTr=wa.transition===true?1:0;
+      var bTr=wb.transition===true?1:0;
+      if(aTr!==bTr) return bTr-aTr;
+      var ma=a.multibagger_score||0, mb=b.multibagger_score||0;
+      if(ma!==mb) return mb-ma;
+      return (wa.dist_pct||999)-(wb.dist_pct||999);
+    });
+  } else if(cf==='MULTIBAGGER'){
+    // 5배 후보: mb 점수 > Stage 우선 > score
+    filtered.sort(function(a,b){
+      var ma=a.multibagger_score||0, mb=b.multibagger_score||0;
+      if(ma!==mb) return mb-ma;
+      var wa=a.weinstein||{}, wb=b.weinstein||{};
+      var aEarly=(wa.stage==='Stage2'&&wa.sub==='early')||wa.transition===true?1:0;
+      var bEarly=(wb.stage==='Stage2'&&wb.sub==='early')||wb.transition===true?1:0;
+      if(aEarly!==bEarly) return bEarly-aEarly;
+      return (b.score||0)-(a.score||0);
     });
   } else {
     filtered.sort((a,b)=>b.score-a.score);
