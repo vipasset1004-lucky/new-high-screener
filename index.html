@@ -308,8 +308,18 @@ body.ops-mode .ops-banner{display:block}
   <h1>🔥 신고가 위치 판별 엔진</h1>
   <div class="header-sub">Minervini · VCP · ATH · Fibonacci · Retest 복합 분석</div>
   <div class="controls">
+    <!-- 일반 모드: 최소 점수만 노출 (클라이언트 필터링) -->
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="selMin" onchange="applyMinScoreFilter()" style="flex:1">
+        <option value="40">최소 40점 (모든 후보)</option>
+        <option value="50" selected>최소 50점 (균형)</option>
+        <option value="60">최소 60점 (보수적)</option>
+        <option value="70">최소 70점 (강력만)</option>
+        <option value="80">최소 80점 (PRIME-S 급)</option>
+      </select>
+    </div>
     <!-- 관리자 모드 컨트롤 (admin URL에서만 노출) -->
-    <div id="adminControls" style="display:none">
+    <div id="adminControls" style="display:none;margin-top:8px">
       <div class="controls-row">
         <select id="selN">
           <option value="150">상위 150종목</option>
@@ -317,11 +327,6 @@ body.ops-mode .ops-banner{display:block}
           <option value="450">상위 450종목</option>
           <option value="538">전체 538종목</option>
           <option value="auto">🔄 자동 유니버스</option>
-        </select>
-        <select id="selMin">
-          <option value="40">최소 40점</option>
-          <option value="50" selected>최소 50점</option>
-          <option value="60">최소 60점</option>
         </select>
       </div>
       <div class="new-toggle">
@@ -437,7 +442,11 @@ window.addEventListener('load',()=>{
   fetch(API+'/api/cached-results').then(r=>r.json())
     .then(d=>{
       if(d && d.results && d.results.length){
-        all=d.results; render(all); updateStat(d);
+        _allUnfiltered = d.results.slice();
+        // 초기 최소 점수 필터 적용
+        const minS = parseFloat(document.getElementById('selMin').value || '50');
+        all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
+        render(all); updateStat(d);
       }
       // 분석 종목 수 표시
       const lsi = document.getElementById('lastScanInfo');
@@ -463,6 +472,20 @@ window.addEventListener('load',()=>{
   // 다음 자동 스캔 카운트다운 시작
   startCountdown();
 });
+
+// 클라이언트 사이드 최소 점수 필터 (자동 스캔 결과 재필터)
+let _allUnfiltered = [];
+function applyMinScoreFilter(){
+  const minS = parseFloat(document.getElementById('selMin').value || '50');
+  if(!_allUnfiltered.length) _allUnfiltered = all.slice();
+  all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
+  render(all);
+  // 카운트 갱신
+  const lsi = document.getElementById('lastScanInfo');
+  if(lsi){
+    lsi.innerHTML = lsi.innerHTML.replace(/발견 \d+개/, `발견 ${all.length}개`);
+  }
+}
 
 function startCountdown(){
   const el = document.getElementById('nextScanCountdown');
