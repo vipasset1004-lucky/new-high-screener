@@ -130,6 +130,8 @@ select{
 .tab.s2-tab.active{background:#10b98122;border-color:#10b98188;color:#34d399}
 .tab.gold-tab{background:#f59e0b11;border-color:#f59e0b66;color:#fcd34d}
 .tab.gold-tab.active{background:#f59e0b33;border-color:#f59e0b;color:#fbbf24}
+.tab.top-tab{background:linear-gradient(135deg,#f59e0b22,#ef444422);border-color:#f59e0b;color:#fcd34d;font-weight:800}
+.tab.top-tab.active{background:linear-gradient(135deg,#f59e0b44,#ef444444);border-color:#fbbf24;color:#fde047;box-shadow:0 0 12px #f59e0b66}
 .tcnt{display:inline-block;background:#1a2540;border:1px solid #2a3a5a;color:#6b7a99;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700;min-width:18px;text-align:center}
 .tcnt.has{color:#fcd34d;border-color:#f59e0b66;background:#f59e0b1a}
 
@@ -375,6 +377,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab mb-tab" onclick="flt(this,'MULTIBAGGER')" title="5배 후보 (백테스트 1051건 평균 1.4년 추적: +50% 도달 72.6%, +200% 도달 25.6%, +500% 도달 7.7%). type=TREND + ATH + Retest + RVOL2x + RSI 적정 조합">🚀 5배 후보 <span id="tabMBCnt" class="tcnt">-</span></button>
     <button class="tab s2-tab" onclick="flt(this,'STAGE2')" title="Weinstein Stage 2 — 본격 상승 단계 (가격 > 30주선, 30주선 상승 중). Stage 2 early(ma150 +0~15%)가 가장 이상적 매수 시점">🌱 Stage2 <span id="tabS2Cnt" class="tcnt">-</span></button>
     <button class="tab gold-tab" onclick="flt(this,'GOLDEN')" title="🌟 황금매수 — Stage 2 EARLY (ma150 +0~15%, 본격 상승 초기) + Stage 1→2 전환 종목. 진짜 매수 시점인 종목들만 압축. 백테스트상 5배 후보 풀의 핵심.">🌟 황금매수 <span id="tabGoldCnt" class="tcnt">-</span></button>
+    <button class="tab top-tab" onclick="flt(this,'TOP_PICK')" title="🏆 최우선 매수 — 🌟 황금매수 ∩ 🚀 5배 후보 GOOD 교집합. 매수 시점 최적 + 5배 잠재력 검증된 종목만. 가장 확신 있는 매수 후보 (1/2~1/3 풀 사이즈 권장).">🏆 최우선 <span id="tabTopCnt2" class="tcnt">-</span></button>
     <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
@@ -492,6 +495,13 @@ function show(r,f){
     // 🌟 황금매수: Stage 2 EARLY (ma150 +0~15%) + Stage 1→2 전환 — 진짜 매수 시점만 압축
     return (r.weinstein?.stage === 'Stage2' && r.weinstein?.sub === 'early')
         || (r.weinstein?.transition === true);
+  }
+  if(f==='TOP_PICK'){
+    // 🏆 최우선: 🌟 황금매수 ∩ 🚀 5배 후보 GOOD (교집합)
+    const isGolden = (r.weinstein?.stage === 'Stage2' && r.weinstein?.sub === 'early')
+                  || (r.weinstein?.transition === true);
+    const isMB = (r.multibagger_score||0) >= 60;
+    return isGolden && isMB;
   }
   if(f==='COILING'){
     // 고가응축: 3~5일 후 상승 준비 종목
@@ -870,6 +880,13 @@ function counts(r){
   const cGold = r.filter(x=>(x.weinstein?.stage==='Stage2'&&x.weinstein?.sub==='early')||x.weinstein?.transition===true).length;
   const tabGoldEl = document.getElementById('tabGoldCnt');
   if(tabGoldEl){tabGoldEl.textContent=cGold;tabGoldEl.classList.toggle('has', cGold>0);}
+  // 🏆 최우선 카운트 (황금매수 ∩ 멀티배거 GOOD)
+  const cTop = r.filter(x=>{
+    const g=(x.weinstein?.stage==='Stage2'&&x.weinstein?.sub==='early')||x.weinstein?.transition===true;
+    return g && (x.multibagger_score||0)>=60;
+  }).length;
+  const tabTopEl2 = document.getElementById('tabTopCnt2');
+  if(tabTopEl2){tabTopEl2.textContent=cTop;tabTopEl2.classList.toggle('has', cTop>0);}
   const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((x.score_detail?.penalty||0)===0)&&((x.rsi||0)<75)).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');
