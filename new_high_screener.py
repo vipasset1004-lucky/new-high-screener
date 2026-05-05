@@ -684,6 +684,121 @@ def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
         except: continue
     return None
 
+# ── 외국인/기관 매매 동향 (네이버 모바일 trend API) ──
+def fetch_supply_trend(ticker, days=10):
+    """
+    한국 종목 외국인/기관/개인 일별 순매수 데이터 (네이버 모바일).
+    Returns: dict {
+        'foreigner_5d': 외국인 5일 누적 순매수 (주),
+        'organ_5d':     기관 5일 누적 순매수 (주),
+        'foreign_inst_combo_days': 외국인+기관 동반매수 일수 (5일 중),
+        'foreign_buy_days': 외국인 매수일수 (5일 중),
+    }
+    """
+    try:
+        url = f"https://m.stock.naver.com/api/stock/{str(ticker).zfill(6)}/trend"
+        req = _urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with _urlreq.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        if not data: return None
+        # 최근 5일 추출 (응답은 최신순 정렬)
+        recent = data[:5]
+
+        def _parse(s):
+            if not s: return 0
+            return int(str(s).replace(",", "").replace("+", ""))
+
+        f5 = sum(_parse(d.get("foreignerPureBuyQuant", "0")) for d in recent)
+        o5 = sum(_parse(d.get("organPureBuyQuant", "0"))     for d in recent)
+        combo = sum(1 for d in recent
+                    if _parse(d.get("foreignerPureBuyQuant","0")) > 0
+                    and _parse(d.get("organPureBuyQuant","0")) > 0)
+        fbuy = sum(1 for d in recent
+                   if _parse(d.get("foreignerPureBuyQuant","0")) > 0)
+        obuy = sum(1 for d in recent
+                   if _parse(d.get("organPureBuyQuant","0")) > 0)
+
+        return {
+            "foreigner_5d": f5,
+            "organ_5d": o5,
+            "foreign_inst_combo_days": combo,
+            "foreign_buy_days": fbuy,
+            "organ_buy_days": obuy,
+        }
+    except Exception:
+        return None
+
+
+def fetch_supply_batch(tickers, max_workers=15):
+    """후보 종목 외국인/기관 매매 동향 병렬 수집. tickers: list of dicts"""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    out = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {ex.submit(fetch_supply_trend, t["ticker"]): t for t in tickers}
+        for fut in as_completed(futures):
+            try:
+                t = futures[fut]
+                supply = fut.result()
+                if supply:
+                    out[t["ticker"]] = supply
+            except Exception:
+                pass
+    return out
+
+
+# ── Failed Breakout 감지 (Minervini) ──
+def is_failed_breakout(df, nh):
+    """첫 돌파 후 8~10거래일 내 -8% 이상 빠지면 실패. True = 위험."""
+    if df is None or nh is None: return False
+    if not nh.get("first_breakout"): return False
+    days_ago = nh.get("days_ago", 0)
+    if days_ago < 1 or days_ago > 10: return False
+    breakout_high = float(nh.get("breakout_high", 0))
+    if breakout_high <= 0: return False
+    close = df["Close"].values
+    n_check = min(days_ago + 1, len(close))
+    since_high = close[-n_check:]
+    if since_high.min() / breakout_high - 1 <= -0.08:
+        return True
+    return False
+
+
+# ── RS Line 신고가 (Minervini 핵심) ──
+def is_rs_line_at_high(df, index_df):
+    """RS line = stock_close / index_close가 52주 신고가에 도달했는지.
+    가격은 신고가 못 쳐도 RS가 신고가면 진짜 주도주 신호."""
+    if df is None or index_df is None: return False
+    c = df["Close"].values
+    if len(c) < 50: return False
+    # 인덱스를 종목 길이에 맞춤
+    i_close = index_df["Close"]
+    aligned = i_close.reindex(df.index, method="ffill").values
+    if len(aligned) != len(c): return False
+    valid = ~pd.isna(aligned) & (aligned > 0)
+    if valid.sum() < 50: return False
+    rs = c[valid] / aligned[valid]
+    if len(rs) < 50: return False
+    return rs[-1] >= rs.max() * 0.99
+
+
+# ── Distribution Day 카운트 (O'Neil 시장 진단) ──
+def count_distribution_days(index_df, lookback=25):
+    """25거래일 내 분산일 (큰 거래량 + 종가 -0.2%↓) 횟수.
+    0~3: 정상 / 4~5: 주의 / 6+: 위험"""
+    if index_df is None or len(index_df) < lookback + 1: return 0
+    c = index_df["Close"].values
+    v = index_df["Volume"].values
+    v_ma = pd.Series(v).rolling(20).mean().values
+    cnt = 0
+    for i in range(-lookback, 0):
+        if i - 1 < -len(c) or pd.isna(v_ma[i]): continue
+        if c[i-1] == 0: continue
+        ret = c[i] / c[i-1] - 1
+        if ret < -0.002 and v[i] > v_ma[i] * 1.05:
+            cnt += 1
+    return cnt
+
+
 # ── 1차 필터: 신고가 후보 판별 (detect_new_high와 동기화) ──
 def is_near_high_candidate(df, win=None, lookback=None):
     """
@@ -1684,7 +1799,7 @@ TYPE_META = {
 # ═══════════════════���════════════════════════════════════
 # 단일 종목 분석
 # ═══════════════════════════════════════════���════════════
-def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, market_regime="BULL", df=None):
+def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, market_regime="BULL", df=None, supply_data=None):
     try:
         if df is None:
             df = fetch_daily(ticker, is_korean)
@@ -1915,6 +2030,10 @@ def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, mark
             "is_overheated_warn": bool(
                 rsi > 75 and (nh.get("rvol", 1.0) >= 4.0 or (d6.get("ma20_dist_pct") or 0) > 12.0)
             ),
+            # ── Phase A: 대가/기관 신호 추가 ──────────────────
+            "rs_line_high"      : is_rs_line_at_high(df, index_df),
+            "failed_breakout"   : is_failed_breakout(df, nh),
+            "supply"            : supply_data,  # 외국인/기관 5일 누적 (None 가능)
             # ── Phase 3: 매매 규칙 (등급별 차등) ────────────────
             # PRIME-S/PRIME: 풀 사이즈, -7% 손절
             # CORE(A+):      1/2 사이즈, -7% 손절
@@ -2259,6 +2378,7 @@ def calculate_entry_score(stock):
     is_prime = stock.get("is_prime", False)
     g = stock.get("grade", "")
 
+    # ── [1] 등급 점수 (40점) ─────────────────────────────
     if   is_ps and ps_sub == "MAX":        g_sc = 40
     elif is_ps and ps_sub == "eXplosive":  g_sc = 35
     elif is_ps and ps_sub == "Safe":       g_sc = 30
@@ -2311,6 +2431,10 @@ def calculate_entry_score(stock):
     if pen == 0:                                     extra += 4   # 페널티 없음
     breakdown["extra"] = extra
     score += extra
+
+    # 참고: supply / failed_breakout / rs_line_high 등 정보는 stock에 보존되어 있으나
+    # 백테스트 결과 (1125건) entry_score 포함 시 정확성 검증 실패하여 점수 제외.
+    # UI에는 표시되어 사용자 판단 정보로 활용됨.
 
     # ── 액션 결정 ─────────────────────────────────────────
     if   score >= 85:  action = "STRONG_BUY"

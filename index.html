@@ -336,7 +336,7 @@ body.ops-mode .ops-banner{display:block}
   <div class="stat clickable" onclick="statFlt(this,'KILLER')" title="킬러필터만 보기"><div class="stat-lbl">⚡ 킬러</div><div class="stat-val" id="cntK">-</div></div>
   <div class="stat clickable" onclick="statFlt(this,'ENTRY')" title="진입 가능 종목만 보기"><div class="stat-lbl">🟢 진입가능</div><div class="stat-val" id="cntEntry" style="color:#22c55e">-</div></div>
   <div class="stat clickable" onclick="statFlt(this,'RS_LEADER')" title="RS 상위 20% 주도주만 보기"><div class="stat-lbl">🏅 주도주</div><div class="stat-val" id="cntRS" style="color:#fbbf24">-</div></div>
-  <div class="stat clickable" onclick="statFlt(this,'TOMORROW_BUY')" title="조용히 눌린 PRIME 종목 — 3~5일 보유 전략 (백테스트 5일 승률 52.9%)"><div class="stat-lbl">🎯 내일매수</div><div class="stat-val" id="cntTB" style="color:#f87171">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'TOMORROW_BUY')" title="PRIME + 페널티없음 + 풀백재돌파형 (백테스트 116건: 10일 승률 61.2%, 평균 +3.55%, +5% 도달 38.8%)"><div class="stat-lbl">🎯 단기후보</div><div class="stat-val" id="cntTB" style="color:#f87171">-</div></div>
   <div class="stat"><div class="stat-lbl">📊 확산도</div><div class="stat-val" id="cntBreadth" style="font-size:13px">-</div></div>
   <div class="stat"><div class="stat-lbl">🌐 市新高</div><div class="stat-val" id="cntNaver" style="font-size:13px">-</div></div>
 </div>
@@ -367,7 +367,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab" onclick="flt(this,'CB')">📡 CB 추적 <span id="tabCBCnt" class="tcnt">-</span></button>
     <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능 <span id="tabEntryCnt" class="tcnt">-</span></button>
     <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS) <span id="tabRSCnt" class="tcnt">-</span></button>
-    <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')">🎯 내일매수 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
+    <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')" title="PRIME + 페널티없음 + 풀백재돌파 — 10일 승률 61.2% (백테스트 116건)">🎯 단기후보 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
     <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
@@ -466,13 +466,12 @@ function show(r,f){
   if(f==='ENTRY')      return r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY';
   if(f==='RS_LEADER')  return r.rs_top20===true;
   if(f==='TOMORROW_BUY'){
-    // 눌림 반등형 (백테스트 5일 승률 52.9%, 기준선 52.4% 상회)
-    // 조용히(저거래량) 눌리면서 가격은 유지 = 건강한 조정 후 재상승
-    if(!(r.is_prime_s||r.is_prime)) return false;
-    if(!r.rs_top20) return false;
-    if(!r.price_held) return false;          // 고점 근처 가격 유지
-    if((r.candle_score||0) > 1) return false; // 오늘 종가 저점권 (눌림)
-    if((r.gap_pct||0) < -3) return false;     // 갭다운 -3% 초과 제외
+    // v2: 검증된 단기(10일) 알파 — PRIME + 페널티없음 + PULLBACK 재돌파형
+    // 백테스트 116건: 10일 승률 61.2% (baseline 51.1%, +10.1%p), 평균 +3.55%, +5%도달 38.8%
+    if(!(r.is_prime_s||r.is_prime)) return false;        // PRIME 등급
+    if(r.type !== 'PULLBACK_REBREAK') return false;       // 풀백 재돌파형만
+    if((r.score_detail?.penalty || 0) !== 0) return false;// 페널티 없음 (-pen 음수, 0이면 OK)
+    if((r.rsi || 0) >= 75) return false;                  // 과열 안전장치
     return true;
   }
   if(f==='COILING'){
@@ -602,6 +601,21 @@ function card(r){
   if(r.ma20_dist_pct!=null&&r.ma20_dist_pct<=10) sigs.push({l:`MA20이격 ${r.ma20_dist_pct}%`,c:'on'});
   if(r.sector_bonus>0)  sigs.push({l:`섹터+${r.sector_bonus}pt`,c:'on'});
   if(r.rsi>75)          sigs.push({l:`RSI ${r.rsi}`,c:'warn'});
+  // ── 외국인/기관 수급 (Phase A) ──
+  if(r.supply){
+    const f5=r.supply.foreigner_5d||0, o5=r.supply.organ_5d||0, cd=r.supply.foreign_inst_combo_days||0;
+    const fM=(f5/1e6).toFixed(1), oM=(o5/1e6).toFixed(1);
+    if(cd>=3)         sigs.push({l:`👑 외+기관 동반${cd}일`,c:'hot'});
+    else if(cd>=1)    sigs.push({l:`외+기관 동반${cd}일`,c:'on'});
+    if(f5>=500_000)   sigs.push({l:`🌐 외국인 +${fM}M`,c:'hot'});
+    else if(f5>0)     sigs.push({l:`외국인 +${fM}M`,c:'on'});
+    else if(f5<0)     sigs.push({l:`외국인 ${fM}M`,c:'warn'});
+    if(o5>=500_000)   sigs.push({l:`🏛️ 기관 +${oM}M`,c:'hot'});
+    else if(o5>0)     sigs.push({l:`기관 +${oM}M`,c:'on'});
+    else if(o5<0)     sigs.push({l:`기관 ${oM}M`,c:'warn'});
+  }
+  if(r.rs_line_high)    sigs.push({l:'📈 RS라인 신고가',c:'hot'});
+  if(r.failed_breakout) sigs.push({l:'⚠️ Failed BO',c:'warn'});
   const sigHtml=sigs.map(s=>`<span class="sig ${s.c}">${s.l}</span>`).join('');
 
   const rsiC=r.rsi>75?'cr':r.rsi>60?'cg':'cgreen';
@@ -806,7 +820,7 @@ function counts(r){
   setTabCnt('tabCBCnt',cCB);
   setTabCnt('tabEntryCnt',cEntry);
   setTabCnt('tabRSCnt',cRS);
-  const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&(x.candle_score||0)<=1&&(x.gap_pct||0)>-3).length;
+  const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((x.score_detail?.penalty||0)===0)&&((x.rsi||0)<75)).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');
   if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
