@@ -159,7 +159,12 @@ def refresh_dynamic_universe():
 
 @app.route("/")
 def index():
-    return send_file("index.html")
+    response = send_file("index.html")
+    # 모바일 브라우저 캐시 방지 — 항상 최신 HTML/JS 받도록
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.route("/api/cached-results")
