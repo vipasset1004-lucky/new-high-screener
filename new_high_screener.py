@@ -156,7 +156,7 @@ def get_fallback_tickers(top_n=150):
         ("241560","두산밥캣",["건설기계"]),
         ("336260","두산퓨얼셀",["수소", "연료전지"]),
         ("383220","F&F",["의류", "브랜드"]),
-        ("357120","코람코에너지리츠",["리츠", "에너지"]),
+        # 리츠 제외 (357120 코람코에너지리츠) — 추세 매매 부적합
         ("053800","안랩",["사이버보안"]),
         ("030520","한글과컴퓨터",["소프트웨어", "AI"]),
         ("078930","GS",["지주", "에너지"]),
@@ -308,7 +308,7 @@ def get_fallback_tickers(top_n=150):
         ("178320","서진시스템",["통신장비", "방산"]),
         ("183490","엔지인",["건설"]),
         ("195870","해성디에스",["전자부품", "기판"]),
-        ("204210","모두투어리츠",["여행"]),
+        # 리츠 제외 (204210 모두투어리츠)
         ("211050","인카금융서비스",["금융", "보험"]),
         ("214370","케어젠",["바이오", "펩타이드"]),
         ("215600","신라젠",["바이오", "항암"]),
@@ -553,7 +553,7 @@ def get_fallback_tickers(top_n=150):
         ("356860","티엘비",["전자부품", "PCB"]),
         ("357580","아모센스",["전자부품", "무선충전"]),
         ("360070","텐바이텐",["유통"]),
-        ("362320","미래에셋AI인프라리츠",["리츠"]),
+        # 리츠 제외 (362320 미래에셋AI인프라리츠)
         ("365270","큐라클",["바이오", "신약"]),
         ("372910","한컴라이프케어",["방산", "드론"]),
         ("377190","디알텍",["AI", "의료영상"]),
@@ -612,14 +612,25 @@ def get_dynamic_universe(min_mktcap=100_000_000_000, min_vol=3_000_000_000):
             (df["Amount"] > 0)
         ]
 
+        # 리츠/스팩/우선주/ETF/ETN 자동 제외 (추세 매매 부적합)
+        EXCLUDE_PATTERNS = ("리츠", "REIT", "스팩", "SPAC", "ETF", "ETN", "TIGER", "KODEX", "KBSTAR", "ARIRANG", "HANARO", "PLUS")
+
         # 큐레이션 이름 우선 사용
         curated_names = {t["ticker"]: t["name"] for t in get_fallback_tickers(9999)}
 
         result = []
+        excluded_cnt = 0
         for _, row in df.iterrows():
             code = str(row["Code"]).zfill(6)
             name = curated_names.get(code) or str(row["Name"])
+            # 리츠/스팩/ETF 제외
+            if any(p in name for p in EXCLUDE_PATTERNS):
+                excluded_cnt += 1
+                continue
             result.append({"ticker": code, "name": name, "themes": ["자동수집"]})
+
+        if excluded_cnt:
+            print(f"[dynamic_universe] 리츠/스팩/ETF 등 {excluded_cnt}개 자동 제외")
 
         print(f"[dynamic_universe] {len(result)}종목 수집 완료 (시총1000억+/거래대금30억+)")
         return result
