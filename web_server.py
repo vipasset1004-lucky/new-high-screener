@@ -47,6 +47,7 @@ from new_high_screener import (
     get_fallback_tickers, get_dynamic_universe, analyze_stock, fetch_index,
     get_market_regime, post_process_results, fetch_naver_breadth,
     enrich_with_predict, check_gap_at_open, calculate_entry_score, add_entry_scores,
+    fetch_daily_batch, is_near_high_candidate,
 )
 
 app = Flask(__name__)
@@ -226,28 +227,42 @@ def scan():
             tickers = get_merged_universe() if use_auto else get_fallback_tickers(top_n)
             total = len(tickers)
 
-            msg_queue.put({'type': 'status', 'message': f'{total}개 종목 신고가 분석 시작', 'progress': 2, 'total': total})
+            msg_queue.put({'type': 'status', 'message': f'1단계: {total}개 종목 데이터 병렬 수집 중', 'progress': 2, 'total': total})
 
             index_df      = fetch_index("^KS11")
             market_regime = get_market_regime(index_df)
 
-            for i, t in enumerate(tickers):
+            # [1단계] OHLCV 병렬 수집 (15 worker)
+            def _fetch_progress(done, t):
+                pct = int(2 + (done / t) * 30)  # 2% → 32%
+                msg_queue.put({'type': 'progress', 'current': f'데이터 수집 {done}/{t}', 'index': done, 'total': total, 'progress': pct, 'found': 0})
+            df_map = fetch_daily_batch(tickers, max_workers=15, is_korean=True, progress_cb=_fetch_progress)
+
+            # [2단계] 1차 필터 (신고가 후보만 압축, detect_new_high와 동기화)
+            candidates = [t for t in tickers if is_near_high_candidate(df_map.get(t["ticker"]))]
+            n_cand = len(candidates)
+            msg_queue.put({'type': 'status', 'message': f'2단계: {total}→{n_cand}개 후보 정밀 분석', 'progress': 35, 'total': n_cand})
+
+            # [3단계] 후보만 정밀 분석
+            for i, t in enumerate(candidates):
                 ticker = t["ticker"]
                 name = t["name"]
-                progress = int(5 + (i / total) * 90)
+                progress = int(35 + (i / max(n_cand,1)) * 60)  # 35% → 95%
 
-                msg_queue.put({'type': 'progress', 'current': name, 'index': i+1, 'total': total, 'progress': progress, 'found': len(results)})
+                msg_queue.put({'type': 'progress', 'current': name, 'index': i+1, 'total': n_cand, 'progress': progress, 'found': len(results)})
 
                 try:
-                    result = analyze_stock(ticker, name, is_korean=True, index_df=index_df, themes=t.get("themes", []), market_regime=market_regime)
+                    result = analyze_stock(ticker, name, is_korean=True, index_df=index_df,
+                                           themes=t.get("themes", []), market_regime=market_regime,
+                                           df=df_map.get(ticker))
                     if result and result["score"] >= min_score:
                         results.append(result)
                         msg_queue.put({'type': 'result', 'data': result})
                 except Exception:
                     pass
 
-                gc.collect()
-                time.sleep(0.08)
+            df_map = None  # 메모리 회수
+            gc.collect()
 
             results.sort(key=lambda x: (0 if x["type"] == "BREAKOUT_BOTTOM" else
                                         1 if x["type"] == "PULLBACK_REBREAK" else 2,
@@ -354,17 +369,26 @@ def auto_scan_full():
         index_df = fetch_index("^KS11")
         market_regime = get_market_regime(index_df)
 
-        for t in tickers:
+        # [1단계] OHLCV 병렬 수집
+        print(f"[21:00 풀스캔] 1단계: {len(tickers)}종목 병렬 fetch")
+        df_map = fetch_daily_batch(tickers, max_workers=15, is_korean=True)
+
+        # [2단계] 1차 필터 (신고가 후보만)
+        candidates = [t for t in tickers if is_near_high_candidate(df_map.get(t["ticker"]))]
+        print(f"[21:00 풀스캔] 2단계: {len(tickers)}→{len(candidates)}개 후보")
+
+        # [3단계] 정밀 분석
+        for t in candidates:
             try:
                 r = analyze_stock(t["ticker"], t["name"], is_korean=True,
                                   index_df=index_df, themes=t.get("themes", []),
-                                  market_regime=market_regime)
+                                  market_regime=market_regime, df=df_map.get(t["ticker"]))
                 if r and r["score"] >= 40:
                     results.append(r)
             except:
                 pass
-            time.sleep(0.08)
-            gc.collect()
+        df_map = None
+        gc.collect()
 
         results.sort(key=lambda x: (0 if x["type"] == "BREAKOUT_BOTTOM" else
                                     1 if x["type"] == "PULLBACK_REBREAK" else 2,

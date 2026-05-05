@@ -684,6 +684,55 @@ def fetch_daily(ticker, is_korean=True, days=SCAN_DAYS):
         except: continue
     return None
 
+# ── 1차 필터: 신고가 후보 판별 (detect_new_high와 동기화) ──
+def is_near_high_candidate(df, win=None, lookback=None):
+    """
+    1차 필터 — detect_new_high가 신호 낼 가능성 있는 모든 종목 통과.
+    수학적으로 detect_new_high의 신호 조건과 동일 로직을 사용해 놓침 0 보장.
+    조건: 최근 win+1일 안의 max(high) >= 그 이전 lookback일의 max(high) * 0.99
+    """
+    if df is None: return False
+    win      = win      or NEW_HIGH_WIN
+    lookback = lookback or HIGH_52W
+    if len(df) < lookback + win:
+        return True   # 데이터 부족 종목은 보수적으로 통과 (신규상장 등)
+    high = df["High"].values
+    high_recent = float(high[-(win+1):].max())
+    high_prev   = float(high[-(lookback+win):-(win+1)].max())
+    if high_prev <= 0: return True
+    return high_recent >= high_prev * 0.99   # 1% 안전 마진
+
+
+# ── 병렬 OHLCV 수집 ──
+def fetch_daily_batch(tickers_meta, max_workers=15, is_korean=True, progress_cb=None):
+    """
+    여러 종목 OHLCV를 병렬로 수집. tickers_meta: list of {ticker, name, themes...}
+    return: dict {ticker: df}
+    progress_cb(done, total): 콜백 (선택)
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    out = {}
+    total = len(tickers_meta)
+
+    def _one(t):
+        return t["ticker"], fetch_daily(t["ticker"], is_korean=is_korean)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {ex.submit(_one, t): t for t in tickers_meta}
+        done = 0
+        for fut in as_completed(futures):
+            try:
+                tk, df = fut.result()
+                if df is not None:
+                    out[tk] = df
+            except Exception:
+                pass
+            done += 1
+            if progress_cb and (done % 20 == 0 or done == total):
+                progress_cb(done, total)
+    return out
+
+
 # KOSPI 지수 (RS 계산용) ─ 한 번만 다운로드하고 캐시
 _INDEX_NAVER_MAP = {"^KS11": "KOSPI", "^KQ11": "KOSDAQ"}
 _index_cache = {}
@@ -1635,9 +1684,10 @@ TYPE_META = {
 # ═══════════════════���════════════════════════════════════
 # 단일 종목 분석
 # ═══════════════════════════════════════════���════════════
-def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, market_regime="BULL"):
+def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, market_regime="BULL", df=None):
     try:
-        df = fetch_daily(ticker, is_korean)
+        if df is None:
+            df = fetch_daily(ticker, is_korean)
         if df is None or len(df) < 120: return None
         df = calc_indicators(df)
         if df is None: return None
