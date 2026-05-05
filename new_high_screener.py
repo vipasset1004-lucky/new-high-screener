@@ -2446,6 +2446,126 @@ def calculate_entry_score(stock):
     return {"score": score, "action": action, "breakdown": breakdown}
 
 
+def calculate_multibagger_score(stock):
+    """
+    멀티배거(5배) 후보 점수 — 백테스트 1125건 평균 1.4년 추적 결과 기반.
+    학술/백테스트 검증된 장기 알파 가중치:
+      - type=TREND_CONTINUE: +200% 도달율 lift +5.1pp (가장 강함)
+      - retest: lift +3.2pp
+      - is_ath: lift +3.0pp
+      - rvol >= 2.0: lift +2.3pp
+      - rsi < 65: +500% 도달율 lift +2.7pp
+    Score 0-100. 80+ STRONG (5배 후보), 60+ GOOD (3배 후보).
+    """
+    s = 0
+    bd = {}
+
+    # [1] 추세 진행 (가장 강한 장기 알파, +30)
+    if stock.get("type") == "TREND_CONTINUE":
+        bd["trend"] = 30; s += 30
+    elif stock.get("type") == "PULLBACK_REBREAK":
+        bd["trend"] = 18; s += 18
+    else:
+        bd["trend"] = 0
+
+    # [2] 역사적 신고가 (+15)
+    if stock.get("is_ath"):
+        bd["ath"] = 15; s += 15
+    else:
+        bd["ath"] = 0
+
+    # [3] Retest 패턴 (+12)
+    if stock.get("retest") or stock.get("retest_bonus"):
+        bd["retest"] = 12; s += 12
+    else:
+        bd["retest"] = 0
+
+    # [4] 거래량 동반 (+10)
+    rvol = stock.get("rvol", 1.0) or 1.0
+    if rvol >= 2.0 and rvol <= 5.0:
+        bd["rvol"] = 10; s += 10
+    elif rvol >= 1.5:
+        bd["rvol"] = 5; s += 5
+    else:
+        bd["rvol"] = 0
+
+    # [5] RSI 적정 (40~65) — 과열 X, 죽음 X (+10)
+    rsi = stock.get("rsi", 50) or 50
+    if 40 <= rsi <= 65:
+        bd["rsi"] = 10; s += 10
+    elif 30 <= rsi <= 75:
+        bd["rsi"] = 5; s += 5
+    else:
+        bd["rsi"] = 0
+
+    # [6] VCP 진행수축 — Minervini 검증 매집 (+8)
+    if stock.get("vc_confirmed"):
+        bd["vcp"] = 8; s += 8
+    else:
+        bd["vcp"] = 0
+
+    # [7] Stage 1 위치 — Weinstein 검증 단계 (+5)
+    if stock.get("stage1_ok"):
+        bd["stage1"] = 5; s += 5
+    else:
+        bd["stage1"] = 0
+
+    # [8] 점수 (등급) +5
+    if (stock.get("score", 0) or 0) >= 80:
+        bd["grade"] = 5; s += 5
+    else:
+        bd["grade"] = 0
+
+    # [9] 시장 환경 (+5)
+    if stock.get("market_regime") in ("BULL", "NEUTRAL"):
+        bd["market"] = 5; s += 5
+    else:
+        bd["market"] = 0
+
+    # ── 감점 ──
+    pen = 0
+    sd = stock.get("score_detail") or {}
+    pen_old = -(sd.get("penalty", 0))
+    if pen_old >= 10: pen += 10
+    elif pen_old >= 5: pen += 5
+    if rsi >= 78:    pen += 8   # 과열
+    if stock.get("failed_breakout"): pen += 10
+    bd["penalty"] = -pen
+    s -= pen
+
+    s = max(0, min(100, s))
+
+    # 등급
+    if   s >= 80: grade = "STRONG"; emoji = "🚀"; label = "5배 후보 [STRONG]"
+    elif s >= 60: grade = "GOOD";   emoji = "⭐"; label = "잠재력 [GOOD]"
+    elif s >= 40: grade = "WATCH";  emoji = "📊"; label = "관찰 [WATCH]"
+    else:         grade = "AVOID";  emoji = "❌"; label = "회피"
+
+    return {
+        "score": s,
+        "grade": grade,
+        "emoji": emoji,
+        "label": label,
+        "breakdown": bd,
+    }
+
+
+def add_multibagger_scores(results):
+    """results에 multibagger_score, multibagger_grade 일괄 추가"""
+    for r in results:
+        try:
+            mb = calculate_multibagger_score(r)
+            r["multibagger_score"]    = mb["score"]
+            r["multibagger_grade"]    = mb["grade"]
+            r["multibagger_label"]    = mb["label"]
+            r["multibagger_emoji"]    = mb["emoji"]
+            r["multibagger_breakdown"]= mb["breakdown"]
+        except Exception:
+            r["multibagger_score"] = 0
+            r["multibagger_grade"] = "AVOID"
+    return results
+
+
 def add_entry_scores(results):
     """enrich_with_predict 이후 진입 점수 일괄 추가"""
     for r in results:

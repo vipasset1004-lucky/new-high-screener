@@ -126,6 +126,7 @@ select{
 .tab.rs-tab.active{background:#f59e0b22;border-color:#f59e0b88;color:#fbbf24}
 .tab.buy-tab.active{background:#ef444422;border-color:#ef444488;color:#f87171}
 .tab.coil-tab.active{background:#8b5cf622;border-color:#8b5cf688;color:#c4b5fd}
+.tab.mb-tab.active{background:#06b6d422;border-color:#06b6d488;color:#22d3ee}
 .tcnt{display:inline-block;background:#1a2540;border:1px solid #2a3a5a;color:#6b7a99;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700;min-width:18px;text-align:center}
 .tcnt.has{color:#fcd34d;border-color:#f59e0b66;background:#f59e0b1a}
 
@@ -368,6 +369,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능 <span id="tabEntryCnt" class="tcnt">-</span></button>
     <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS) <span id="tabRSCnt" class="tcnt">-</span></button>
     <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')" title="PRIME + 페널티없음 + 풀백재돌파 — 10일 승률 61.2% (백테스트 116건)">🎯 단기후보 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
+    <button class="tab mb-tab" onclick="flt(this,'MULTIBAGGER')" title="5배 후보 (백테스트 1051건 평균 1.4년 추적: +50% 도달 72.6%, +200% 도달 25.6%, +500% 도달 7.7%). type=TREND + ATH + Retest + RVOL2x + RSI 적정 조합">🚀 5배 후보 <span id="tabMBCnt" class="tcnt">-</span></button>
     <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
@@ -473,6 +475,12 @@ function show(r,f){
     if((r.score_detail?.penalty || 0) !== 0) return false;// 페널티 없음 (-pen 음수, 0이면 OK)
     if((r.rsi || 0) >= 75) return false;                  // 과열 안전장치
     return true;
+  }
+  if(f==='MULTIBAGGER'){
+    // 5배 후보 (백테스트 1051건 평균 1.4년 추적):
+    //  STRONG (80+): type=TREND+ATH+Retest+RVOL2x+RSI 적정 만점급 → +200% 도달 30~35% 기대
+    //  GOOD (60+): 강력 신호 다수
+    return (r.multibagger_score||0) >= 60;
   }
   if(f==='COILING'){
     // 고가응축: 3~5일 후 상승 준비 종목
@@ -582,6 +590,10 @@ function card(r){
   if(cb>=70) bdgs+=`<span class="bdg bdg-cb">📡 CB ${cb} — 강한 지속</span>`;
   else if(cb>=50) bdgs+=`<span class="bdg bdg-cb">📡 CB ${cb}</span>`;
   if(r.is_new_listing)    bdgs+=`<span class="bdg bdg-new">🆕 신규상장</span>`;
+  // 5배 후보 뱃지 (멀티배거 점수 60+)
+  const mb = r.multibagger_score || 0;
+  if(mb >= 80) bdgs+=`<span class="bdg" style="background:#06b6d433;border:1px solid #06b6d4;color:#22d3ee">🚀 5배 후보 [STRONG ${mb}]</span>`;
+  else if(mb >= 60) bdgs+=`<span class="bdg" style="background:#06b6d422;border:1px solid #06b6d488;color:#67e8f9">⭐ 잠재력 [GOOD ${mb}]</span>`;
   const themeHtml=(r.themes&&r.themes.length)?`<div class="badges" style="padding-top:6px">${r.themes.map(t=>`<span class="bdg bdg-theme">${t}</span>`).join('')}</div>`:'';
   const bdgHtml=(bdgs?`<div class="badges">${bdgs}</div>`:'')+themeHtml;
 
@@ -820,6 +832,10 @@ function counts(r){
   setTabCnt('tabCBCnt',cCB);
   setTabCnt('tabEntryCnt',cEntry);
   setTabCnt('tabRSCnt',cRS);
+  // 5배 후보 카운트
+  const cMB = r.filter(x=>(x.multibagger_score||0) >= 60).length;
+  const tabMBEl = document.getElementById('tabMBCnt');
+  if(tabMBEl){tabMBEl.textContent=cMB;tabMBEl.classList.toggle('has', cMB>0);}
   const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((x.score_detail?.penalty||0)===0)&&((x.rsi||0)<75)).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');

@@ -49,6 +49,7 @@ from new_high_screener import (
     enrich_with_predict, check_gap_at_open, calculate_entry_score, add_entry_scores,
     fetch_daily_batch, is_near_high_candidate,
     fetch_supply_batch, count_distribution_days,
+    add_multibagger_scores,
 )
 
 app = Flask(__name__)
@@ -285,6 +286,7 @@ def scan():
             results = post_process_results(results)
             results = enrich_with_predict(results)
             results = add_entry_scores(results)
+            results = add_multibagger_scores(results)
 
             breadth_scan  = round(len(results) / total * 100, 1) if total > 0 else 0
             naver_breadth = fetch_naver_breadth()
