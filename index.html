@@ -127,6 +127,7 @@ select{
 .tab.buy-tab.active{background:#ef444422;border-color:#ef444488;color:#f87171}
 .tab.coil-tab.active{background:#8b5cf622;border-color:#8b5cf688;color:#c4b5fd}
 .tab.mb-tab.active{background:#06b6d422;border-color:#06b6d488;color:#22d3ee}
+.tab.s2-tab.active{background:#10b98122;border-color:#10b98188;color:#34d399}
 .tcnt{display:inline-block;background:#1a2540;border:1px solid #2a3a5a;color:#6b7a99;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700;min-width:18px;text-align:center}
 .tcnt.has{color:#fcd34d;border-color:#f59e0b66;background:#f59e0b1a}
 
@@ -370,6 +371,7 @@ body.ops-mode .ops-banner{display:block}
     <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS) <span id="tabRSCnt" class="tcnt">-</span></button>
     <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')" title="PRIME + 페널티없음 + 풀백재돌파 — 10일 승률 61.2% (백테스트 116건)">🎯 단기후보 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
     <button class="tab mb-tab" onclick="flt(this,'MULTIBAGGER')" title="5배 후보 (백테스트 1051건 평균 1.4년 추적: +50% 도달 72.6%, +200% 도달 25.6%, +500% 도달 7.7%). type=TREND + ATH + Retest + RVOL2x + RSI 적정 조합">🚀 5배 후보 <span id="tabMBCnt" class="tcnt">-</span></button>
+    <button class="tab s2-tab" onclick="flt(this,'STAGE2')" title="Weinstein Stage 2 — 본격 상승 단계 (가격 > 30주선, 30주선 상승 중). Stage 2 early(ma150 +0~15%)가 가장 이상적 매수 시점">🌱 Stage2 <span id="tabS2Cnt" class="tcnt">-</span></button>
     <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
@@ -477,10 +479,11 @@ function show(r,f){
     return true;
   }
   if(f==='MULTIBAGGER'){
-    // 5배 후보 (백테스트 1051건 평균 1.4년 추적):
-    //  STRONG (80+): type=TREND+ATH+Retest+RVOL2x+RSI 적정 만점급 → +200% 도달 30~35% 기대
-    //  GOOD (60+): 강력 신호 다수
     return (r.multibagger_score||0) >= 60;
+  }
+  if(f==='STAGE2'){
+    // Weinstein Stage 2 - 본격 상승 단계 (매수 단계)
+    return (r.weinstein?.stage === 'Stage2') || (r.weinstein?.transition === true);
   }
   if(f==='COILING'){
     // 고가응축: 3~5일 후 상승 준비 종목
@@ -594,6 +597,21 @@ function card(r){
   const mb = r.multibagger_score || 0;
   if(mb >= 80) bdgs+=`<span class="bdg" style="background:#06b6d433;border:1px solid #06b6d4;color:#22d3ee">🚀 5배 후보 [STRONG ${mb}]</span>`;
   else if(mb >= 60) bdgs+=`<span class="bdg" style="background:#06b6d422;border:1px solid #06b6d488;color:#67e8f9">⭐ 잠재력 [GOOD ${mb}]</span>`;
+  // Weinstein Stage 뱃지
+  if(r.weinstein){
+    const w = r.weinstein;
+    const sname = w.stage + (w.sub ? ' ['+w.sub+']' : '');
+    if(w.stage === 'Stage2' && w.sub === 'early')
+      bdgs+=`<span class="bdg" style="background:#10b98133;border:1px solid #10b981;color:#34d399">🌱 ${sname} (ma150 +${w.dist_pct}%)</span>`;
+    else if(w.stage === 'Stage2')
+      bdgs+=`<span class="bdg" style="background:#10b98122;border:1px solid #10b98188;color:#6ee7b7">📈 ${sname} (ma150 +${w.dist_pct}%)</span>`;
+    else if(w.transition === true)
+      bdgs+=`<span class="bdg" style="background:#fbbf2422;border:1px solid #fbbf24;color:#fcd34d">⚡ Stage 1→2 전환</span>`;
+    else if(w.stage === 'Stage3')
+      bdgs+=`<span class="bdg" style="background:#f59e0b22;border:1px solid #f59e0b88;color:#fbbf24">⚠️ Stage 3 (분배 주의)</span>`;
+    else if(w.stage === 'Stage4')
+      bdgs+=`<span class="bdg" style="background:#ef444422;border:1px solid #ef4444;color:#f87171">⛔ Stage 4 (하락)</span>`;
+  }
   const themeHtml=(r.themes&&r.themes.length)?`<div class="badges" style="padding-top:6px">${r.themes.map(t=>`<span class="bdg bdg-theme">${t}</span>`).join('')}</div>`:'';
   const bdgHtml=(bdgs?`<div class="badges">${bdgs}</div>`:'')+themeHtml;
 
@@ -836,6 +854,10 @@ function counts(r){
   const cMB = r.filter(x=>(x.multibagger_score||0) >= 60).length;
   const tabMBEl = document.getElementById('tabMBCnt');
   if(tabMBEl){tabMBEl.textContent=cMB;tabMBEl.classList.toggle('has', cMB>0);}
+  // Stage 2 카운트
+  const cS2 = r.filter(x=>x.weinstein?.stage==='Stage2'||x.weinstein?.transition===true).length;
+  const tabS2El = document.getElementById('tabS2Cnt');
+  if(tabS2El){tabS2El.textContent=cS2;tabS2El.classList.toggle('has', cS2>0);}
   const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((x.score_detail?.penalty||0)===0)&&((x.rsi||0)<75)).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');

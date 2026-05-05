@@ -763,6 +763,61 @@ def is_failed_breakout(df, nh):
     return False
 
 
+# ── Weinstein 4 Stage Analysis ──
+def detect_weinstein_stage(df):
+    """
+    Stan Weinstein의 4 Stage Analysis 명시적 식별.
+    30주선(ma150) 방향 + 가격 위치로 4단계 구분.
+      Stage 1: 바닥 형성 (가격 30주선 아래/근처, 30주선 평탄)
+      Stage 2: 본격 상승 ⭐ 매수 단계 (가격>30주선, 30주선 상승)
+        - early: ma150 +0~15% (이상적 매수)
+        - mid:   +15~35%
+        - late:  +35%+ (이미 많이 감)
+      Stage 3: 분배 (가격>30주선, 30주선 평탄/하락 시작)
+      Stage 4: 하락 (가격<30주선, 30주선 하락)
+    """
+    if df is None or 'ma150' not in df.columns or len(df) < 180:
+        return None
+    ma150_arr = df['ma150'].dropna()
+    if len(ma150_arr) < 30:
+        return None
+
+    ma150_now = float(ma150_arr.iloc[-1])
+    ma150_30  = float(ma150_arr.iloc[-30])
+    if ma150_30 <= 0 or ma150_now <= 0:
+        return None
+    slope_30d = (ma150_now / ma150_30 - 1) * 100
+
+    price = float(df['Close'].iloc[-1])
+    price_above = price > ma150_now
+    dist_pct = (price / ma150_now - 1) * 100
+
+    # Stage 1→2 전환 식별 (특별 가치): 최근 30일 안에 가격이 ma150 위로 돌파
+    transition = False
+    if price_above:
+        c = df['Close'].values
+        ma_arr = df['ma150'].values
+        for i in range(-30, -1):
+            if i+1 < -len(c): continue
+            if c[i] <= ma_arr[i] and c[i+1] > ma_arr[i+1]:
+                transition = True
+                break
+
+    if price_above and slope_30d > 2:
+        sub = "early" if dist_pct < 15 else "mid" if dist_pct < 35 else "late"
+        result = {"stage": "Stage2", "sub": sub, "slope_30d": round(slope_30d,2), "dist_pct": round(dist_pct,1), "transition": transition}
+    elif price_above and abs(slope_30d) <= 2:
+        result = {"stage": "Stage3", "sub": "", "slope_30d": round(slope_30d,2), "dist_pct": round(dist_pct,1), "transition": False}
+    elif not price_above and abs(slope_30d) <= 2:
+        result = {"stage": "Stage1", "sub": "", "slope_30d": round(slope_30d,2), "dist_pct": round(dist_pct,1), "transition": False}
+    elif not price_above and slope_30d < -2:
+        result = {"stage": "Stage4", "sub": "", "slope_30d": round(slope_30d,2), "dist_pct": round(dist_pct,1), "transition": False}
+    else:
+        result = {"stage": "Transition", "sub": "", "slope_30d": round(slope_30d,2), "dist_pct": round(dist_pct,1), "transition": transition}
+
+    return result
+
+
 # ── RS Line 신고가 (Minervini 핵심) ──
 def is_rs_line_at_high(df, index_df):
     """RS line = stock_close / index_close가 52주 신고가에 도달했는지.
@@ -2034,6 +2089,7 @@ def analyze_stock(ticker, name, is_korean=True, index_df=None, themes=None, mark
             "rs_line_high"      : is_rs_line_at_high(df, index_df),
             "failed_breakout"   : is_failed_breakout(df, nh),
             "supply"            : supply_data,  # 외국인/기관 5일 누적 (None 가능)
+            "weinstein"         : detect_weinstein_stage(df),  # Stage 1/2/3/4 + sub
             # ── Phase 3: 매매 규칙 (등급별 차등) ────────────────
             # PRIME-S/PRIME: 풀 사이즈, -7% 손절
             # CORE(A+):      1/2 사이즈, -7% 손절
@@ -2521,6 +2577,26 @@ def calculate_multibagger_score(stock):
         bd["market"] = 5; s += 5
     else:
         bd["market"] = 0
+
+    # [10] Weinstein Stage 2 가산점 (Stage 2 진입 직후가 황금)
+    w = stock.get("weinstein") or {}
+    wstage = w.get("stage", "")
+    wsub = w.get("sub", "")
+    if wstage == "Stage2" and wsub == "early":
+        bd["stage2"] = 10; s += 10  # 30주선 +0~15% — 본격 상승 초기 (최적)
+    elif wstage == "Stage2" and wsub == "mid":
+        bd["stage2"] = 5; s += 5
+    elif wstage == "Stage2":
+        bd["stage2"] = 2; s += 2    # late
+    elif wstage == "Transition" and w.get("transition"):
+        bd["stage2"] = 8; s += 8    # Stage 1→2 전환 직후 (가치 큼)
+    else:
+        bd["stage2"] = 0
+        # Stage 3/4는 감점
+        if wstage == "Stage3":
+            s -= 3; bd["stage2"] = -3
+        elif wstage == "Stage4":
+            s -= 8; bd["stage2"] = -8
 
     # ── 감점 ──
     pen = 0
