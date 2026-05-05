@@ -126,6 +126,8 @@ select{
 .tab.rs-tab.active{background:#f59e0b22;border-color:#f59e0b88;color:#fbbf24}
 .tab.buy-tab.active{background:#ef444422;border-color:#ef444488;color:#f87171}
 .tab.coil-tab.active{background:#8b5cf622;border-color:#8b5cf688;color:#c4b5fd}
+.tcnt{display:inline-block;background:#1a2540;border:1px solid #2a3a5a;color:#6b7a99;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700;min-width:18px;text-align:center}
+.tcnt.has{color:#fcd34d;border-color:#f59e0b66;background:#f59e0b1a}
 
 /* ── 카드 리스트 ── */
 .main{padding:12px 12px 8px}
@@ -353,18 +355,18 @@ body.ops-mode .ops-banner{display:block}
 
 <div class="tabs-wrap">
   <div class="tabs">
-    <button class="tab active" onclick="flt(this,'ALL')">전체</button>
-    <button class="tab tb" onclick="flt(this,'BREAKOUT_BOTTOM')">🏔️ 바닥탈출형</button>
-    <button class="tab tp" onclick="flt(this,'PULLBACK_REBREAK')">💎 눌림재돌파형</button>
-    <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형</button>
-    <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터</button>
-    <button class="tab tr" onclick="flt(this,'RETEST')">↩ Retest</button>
-    <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가</button>
-    <button class="tab" onclick="flt(this,'TOP')">🔥 A이상만</button>
-    <button class="tab" onclick="flt(this,'EARLY')">🔍 초기탐색(B)</button>
-    <button class="tab" onclick="flt(this,'CB')">📡 CB 추적</button>
-    <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능</button>
-    <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS)</button>
+    <button class="tab active" onclick="flt(this,'ALL')">전체 <span id="tabAllCnt" class="tcnt">-</span></button>
+    <button class="tab tb" onclick="flt(this,'BREAKOUT_BOTTOM')">🏔️ 바닥탈출형 <span id="tabBBCnt" class="tcnt">-</span></button>
+    <button class="tab tp" onclick="flt(this,'PULLBACK_REBREAK')">💎 눌림재돌파형 <span id="tabPRCnt" class="tcnt">-</span></button>
+    <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형 <span id="tabTCCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터 <span id="tabKCnt" class="tcnt">-</span></button>
+    <button class="tab tr" onclick="flt(this,'RETEST')">↩ Retest <span id="tabRetestCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가 <span id="tabATHCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'TOP')">🔥 A이상만 <span id="tabTopCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'EARLY')">🔍 초기탐색(B) <span id="tabEarlyCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'CB')">📡 CB 추적 <span id="tabCBCnt" class="tcnt">-</span></button>
+    <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능 <span id="tabEntryCnt" class="tcnt">-</span></button>
+    <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS) <span id="tabRSCnt" class="tcnt">-</span></button>
     <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')">🎯 내일매수 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
     <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
@@ -765,14 +767,45 @@ function updateStat(d){
 }
 
 function setCnt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function setTabCnt(id, n){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent=n;
+  el.classList.toggle('has', n>0);
+}
 function counts(r){
-  setCnt('cntAll',r.length);
-  setCnt('cntBB',r.filter(x=>x.type==='BREAKOUT_BOTTOM').length);
-  setCnt('cntPR',r.filter(x=>x.type==='PULLBACK_REBREAK').length);
-  setCnt('cntTC',r.filter(x=>x.type==='TREND_CONTINUE').length);
-  setCnt('cntK',r.filter(x=>x.first_breakout&&x.rvol>=2.0).length);
-  setCnt('cntEntry',r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length);
-  setCnt('cntRS',r.filter(x=>x.rs_top20===true).length);
+  const cAll=r.length;
+  const cBB =r.filter(x=>x.type==='BREAKOUT_BOTTOM').length;
+  const cPR =r.filter(x=>x.type==='PULLBACK_REBREAK').length;
+  const cTC =r.filter(x=>x.type==='TREND_CONTINUE').length;
+  const cK  =r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
+  const cRetest=r.filter(x=>x.retest||x.retest_bonus).length;
+  const cATH=r.filter(x=>x.is_ath===true).length;
+  const cTop=r.filter(x=>x.grade==='A+'||x.grade==='A').length;
+  const cEarly=r.filter(x=>x.grade==='B').length;
+  const cCB =r.filter(x=>(x.cb_score||0)>=50).length;
+  const cEntry=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
+  const cRS =r.filter(x=>x.rs_top20===true).length;
+  setCnt('cntAll',cAll);
+  setCnt('cntBB',cBB);
+  setCnt('cntPR',cPR);
+  setCnt('cntTC',cTC);
+  setCnt('cntK',cK);
+  setCnt('cntEntry',cEntry);
+  setCnt('cntRS',cRS);
+  // 탭 뱃지
+  setTabCnt('tabAllCnt',cAll);
+  setTabCnt('tabBBCnt',cBB);
+  setTabCnt('tabPRCnt',cPR);
+  setTabCnt('tabTCCnt',cTC);
+  setTabCnt('tabKCnt',cK);
+  setTabCnt('tabRetestCnt',cRetest);
+  setTabCnt('tabATHCnt',cATH);
+  setTabCnt('tabTopCnt',cTop);
+  setTabCnt('tabEarlyCnt',cEarly);
+  setTabCnt('tabCBCnt',cCB);
+  setTabCnt('tabEntryCnt',cEntry);
+  setTabCnt('tabRSCnt',cRS);
   const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&(x.candle_score||0)<=1&&(x.gap_pct||0)>-3).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');
