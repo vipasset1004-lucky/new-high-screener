@@ -308,30 +308,34 @@ body.ops-mode .ops-banner{display:block}
   <h1>🔥 신고가 위치 판별 엔진</h1>
   <div class="header-sub">Minervini · VCP · ATH · Fibonacci · Retest 복합 분석</div>
   <div class="controls">
-    <div class="controls-row">
-      <select id="selN">
-        <option value="150">상위 150종목</option>
-        <option value="300" selected>상위 300종목</option>
-        <option value="450">상위 450종목</option>
-        <option value="538">전체 538종목</option>
-        <option value="auto">🔄 자동 유니버스</option>
-      </select>
-      <select id="selMin">
-        <option value="40">최소 40점</option>
-        <option value="50" selected>최소 50점</option>
-        <option value="60">최소 60점</option>
-      </select>
-    </div>
-    <div class="new-toggle">
-      <input type="checkbox" id="chkNew">
-      <label for="chkNew">🆕 신규상장 종목 포함 (KRX 자동수집)</label>
+    <!-- 관리자 모드 컨트롤 (admin URL에서만 노출) -->
+    <div id="adminControls" style="display:none">
+      <div class="controls-row">
+        <select id="selN">
+          <option value="150">상위 150종목</option>
+          <option value="300" selected>상위 300종목</option>
+          <option value="450">상위 450종목</option>
+          <option value="538">전체 538종목</option>
+          <option value="auto">🔄 자동 유니버스</option>
+        </select>
+        <select id="selMin">
+          <option value="40">최소 40점</option>
+          <option value="50" selected>최소 50점</option>
+          <option value="60">최소 60점</option>
+        </select>
+      </div>
+      <div class="new-toggle">
+        <input type="checkbox" id="chkNew">
+        <label for="chkNew">🆕 신규상장 종목 포함 (KRX 자동수집)</label>
+      </div>
     </div>
     <!-- 자동 스캔 안내 + 카운트다운 -->
     <div id="autoScanInfo" style="background:linear-gradient(135deg,#1a2540,#0d1829);border:1px solid #2a3a5a;border-radius:12px;padding:14px 16px;margin-top:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="flex:1;min-width:200px">
           <div style="font-size:13px;color:#6b7a99;margin-bottom:3px">📊 자동 스캔 운영</div>
-          <div style="font-size:15px;color:#fcd34d;font-weight:700">16:00 (정규장 종가) · 21:00 (시간외 후, 다음날 매수용)</div>
+          <div style="font-size:14px;color:#fcd34d;font-weight:700">16:00 (정규장 종가) · 21:00 (시간외 후)</div>
+          <div id="lastScanInfo" style="font-size:12px;color:#8896b3;margin-top:4px">분석 종목: -</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:11px;color:#6b7a99">다음 스캔까지</div>
@@ -431,11 +435,30 @@ const ADMIN_KEY = urlParams.get('admin') || '';
 
 window.addEventListener('load',()=>{
   fetch(API+'/api/cached-results').then(r=>r.json())
-    .then(d=>{ if(d && d.results && d.results.length){all=d.results;render(all);updateStat(d);} }).catch(()=>{});
-  // 관리자 모드면 수동 스캔 버튼 표시
+    .then(d=>{
+      if(d && d.results && d.results.length){
+        all=d.results; render(all); updateStat(d);
+      }
+      // 분석 종목 수 표시
+      const lsi = document.getElementById('lastScanInfo');
+      if(lsi){
+        const n_scanned = d.total_scanned || '-';
+        const n_found = d.total_found || (d.results ? d.results.length : '-');
+        if(d.scan_date){
+          const dt = new Date(d.scan_date);
+          const dstr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+          lsi.textContent = `분석 종목 ${n_scanned}개 · 발견 ${n_found}개 · ${dstr} 스캔`;
+        } else {
+          lsi.textContent = `분석 종목 ${n_scanned}개 · 발견 ${n_found}개`;
+        }
+      }
+    }).catch(()=>{});
+  // 관리자 모드면 수동 스캔 버튼 + 컨트롤 노출
   if(ADMIN_KEY){
     const sb = document.getElementById('btnScan');
     if(sb){ sb.style.display='block'; }
+    const ac = document.getElementById('adminControls');
+    if(ac){ ac.style.display='block'; }
   }
   // 다음 자동 스캔 카운트다운 시작
   startCountdown();
