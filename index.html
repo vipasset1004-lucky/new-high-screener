@@ -441,6 +441,7 @@ const ADMIN_KEY = urlParams.get('admin') || '';
 window.addEventListener('load',()=>{
   fetch(API+'/api/cached-results').then(r=>r.json())
     .then(d=>{
+      _lastScanMeta = { total_scanned: d.total_scanned, total_found: d.total_found, scan_date: d.scan_date };
       if(d && d.results && d.results.length){
         _allUnfiltered = d.results.slice();
         // 초기 최소 점수 필터 적용
@@ -448,18 +449,18 @@ window.addEventListener('load',()=>{
         all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
         render(all); updateStat(d);
       }
-      // 분석 종목 수 표시
+      // 분석/발견 종목 수 표시 (비율까지)
       const lsi = document.getElementById('lastScanInfo');
       if(lsi){
-        const n_scanned = d.total_scanned || '-';
-        const n_found = d.total_found || (d.results ? d.results.length : '-');
+        const n_scanned = d.total_scanned || 0;
+        const n_found = d.total_found || (d.results ? d.results.length : 0);
+        const ratio = n_scanned > 0 ? (n_found/n_scanned*100).toFixed(1) : '-';
+        let dstr = '';
         if(d.scan_date){
           const dt = new Date(d.scan_date);
-          const dstr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-          lsi.textContent = `분석 종목 ${n_scanned}개 · 발견 ${n_found}개 · ${dstr} 스캔`;
-        } else {
-          lsi.textContent = `분석 종목 ${n_scanned}개 · 발견 ${n_found}개`;
+          dstr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')} 스캔`;
         }
+        lsi.innerHTML = `<span style="font-size:14px;color:#fcd34d;font-weight:700">${n_scanned.toLocaleString()}개 중 <span style="color:#22c55e">${n_found}개 발견</span> (${ratio}%)</span>${dstr?`<span style="margin-left:8px;color:#6b7a99">· ${dstr}</span>`:''}`;
       }
     }).catch(()=>{});
   // 관리자 모드면 수동 스캔 버튼 + 컨트롤 노출
@@ -475,15 +476,24 @@ window.addEventListener('load',()=>{
 
 // 클라이언트 사이드 최소 점수 필터 (자동 스캔 결과 재필터)
 let _allUnfiltered = [];
+let _lastScanMeta = {};
 function applyMinScoreFilter(){
   const minS = parseFloat(document.getElementById('selMin').value || '50');
   if(!_allUnfiltered.length) _allUnfiltered = all.slice();
   all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
   render(all);
-  // 카운트 갱신
+  // 발견 수 + 비율 갱신
   const lsi = document.getElementById('lastScanInfo');
   if(lsi){
-    lsi.innerHTML = lsi.innerHTML.replace(/발견 \d+개/, `발견 ${all.length}개`);
+    const n_scanned = _lastScanMeta.total_scanned || 0;
+    const n_found = all.length;
+    const ratio = n_scanned > 0 ? (n_found/n_scanned*100).toFixed(1) : '-';
+    let dstr = '';
+    if(_lastScanMeta.scan_date){
+      const dt = new Date(_lastScanMeta.scan_date);
+      dstr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')} 스캔`;
+    }
+    lsi.innerHTML = `<span style="font-size:14px;color:#fcd34d;font-weight:700">${n_scanned.toLocaleString()}개 중 <span style="color:#22c55e">${n_found}개 발견</span> (${ratio}%)</span>${dstr?`<span style="margin-left:8px;color:#6b7a99">· ${dstr}</span>`:''}`;
   }
 }
 
