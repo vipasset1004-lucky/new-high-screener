@@ -555,7 +555,9 @@ scheduler.add_job(auto_scan_full,           "cron", hour=16, minute=0,  id="scan
 scheduler.add_job(refresh_dynamic_universe, "cron", hour=20, minute=50, id="universe_evening")
 scheduler.add_job(auto_scan_full,           "cron", hour=21, minute=0,  id="scan_evening")
 # 기존 07:00 퀵스캔 제거 — 21:00 결과로 다음날 매수 결정 충분
-scheduler.start()
+# SKIP_SCHEDULER=1 (GitHub Actions/CLI 모드) 시 스케줄러 안 띄움
+if os.environ.get("SKIP_SCHEDULER") != "1":
+    scheduler.start()
 
 
 # ══════════════════════════════════════════════════════════

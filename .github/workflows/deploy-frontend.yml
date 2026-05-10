@@ -1,0 +1,51 @@
+name: Deploy Frontend Only
+
+# frontend/** 변경 push 시 자동 트리거 — 스캔 재실행 없이 빠른 배포
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: new-high-frontend-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Checkout gh-pages (보존용)
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-current
+
+      - name: Build payload (frontend 새로, 데이터 보존)
+        run: |
+          mkdir -p _site
+          [ -f gh-pages-current/results.json ] && cp gh-pages-current/results.json _site/
+          [ -f gh-pages-current/newhigh_cache.json ] && cp gh-pages-current/newhigh_cache.json _site/
+          [ -f gh-pages-current/newhigh_cache_prev.json ] && cp gh-pages-current/newhigh_cache_prev.json _site/
+          [ -f gh-pages-current/new_listings_cache.json ] && cp gh-pages-current/new_listings_cache.json _site/
+          [ -f gh-pages-current/last_update.json ] && cp gh-pages-current/last_update.json _site/
+          cp frontend/index.html _site/index.html
+          ls -la _site/
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          keep_files: false
+          commit_message: "frontend deploy: ${{ github.event.head_commit.message || 'manual' }}"

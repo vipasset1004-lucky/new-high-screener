@@ -1,0 +1,72 @@
+name: New High Scan
+
+on:
+  # 평일 KST 16:00 = UTC 07:00, KST 21:00 = UTC 12:00
+  schedule:
+    - cron: '0 7 * * 1-5'    # 평일 KST 16:00 (정규장 종가 직후)
+    - cron: '0 12 * * 1-5'   # 평일 KST 21:00 (시간외 단일가 종료 후)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: new-high-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Restore caches from gh-pages (있으면)
+        continue-on-error: true
+        run: |
+          git fetch origin gh-pages || true
+          git show origin/gh-pages:newhigh_cache.json > newhigh_cache.json 2>/dev/null || echo "캐시 없음"
+          git show origin/gh-pages:newhigh_cache_prev.json > newhigh_cache_prev.json 2>/dev/null || true
+          git show origin/gh-pages:new_listings_cache.json > new_listings_cache.json 2>/dev/null || true
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run new high scan
+        env:
+          TZ: Asia/Seoul
+          SKIP_SCHEDULER: "1"
+          OUTPUT_FILE: "results.json"
+        run: python scan_main.py
+
+      - name: Prepare gh-pages payload
+        run: |
+          mkdir -p _site
+          # frontend는 master에서, 데이터는 새 스캔 결과
+          cp frontend/index.html _site/index.html
+          [ -f results.json ] && cp results.json _site/results.json
+          [ -f newhigh_cache.json ] && cp newhigh_cache.json _site/newhigh_cache.json
+          [ -f newhigh_cache_prev.json ] && cp newhigh_cache_prev.json _site/newhigh_cache_prev.json
+          [ -f new_listings_cache.json ] && cp new_listings_cache.json _site/new_listings_cache.json
+          date -u +"{\"updated_at\":\"%Y-%m-%dT%H:%M:%SZ\"}" > _site/last_update.json
+          ls -la _site/
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          keep_files: false
+          force_orphan: false
+          commit_message: "scan ${{ github.run_number }} (${{ github.event_name }})"
