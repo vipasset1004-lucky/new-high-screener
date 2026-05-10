@@ -126,6 +126,14 @@ select{
 .tab.rs-tab.active{background:#f59e0b22;border-color:#f59e0b88;color:#fbbf24}
 .tab.buy-tab.active{background:#ef444422;border-color:#ef444488;color:#f87171}
 .tab.coil-tab.active{background:#8b5cf622;border-color:#8b5cf688;color:#c4b5fd}
+.tab.mb-tab.active{background:#06b6d422;border-color:#06b6d488;color:#22d3ee}
+.tab.s2-tab.active{background:#10b98122;border-color:#10b98188;color:#34d399}
+.tab.gold-tab{background:#f59e0b11;border-color:#f59e0b66;color:#fcd34d}
+.tab.gold-tab.active{background:#f59e0b33;border-color:#f59e0b;color:#fbbf24}
+.tab.top-tab{background:linear-gradient(135deg,#f59e0b22,#ef444422);border-color:#f59e0b;color:#fcd34d;font-weight:800}
+.tab.top-tab.active{background:linear-gradient(135deg,#f59e0b44,#ef444444);border-color:#fbbf24;color:#fde047;box-shadow:0 0 12px #f59e0b66}
+.tcnt{display:inline-block;background:#1a2540;border:1px solid #2a3a5a;color:#6b7a99;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700;min-width:18px;text-align:center}
+.tcnt.has{color:#fcd34d;border-color:#f59e0b66;background:#f59e0b1a}
 
 /* ── 카드 리스트 ── */
 .main{padding:12px 12px 8px}
@@ -270,7 +278,9 @@ body.ops-mode .ops-banner{display:block}
 
 /* ── 모바일 반응형 ── */
 @media(max-width:600px){
-  .tab{font-size:13px;padding:7px 11px}
+  .tab{font-size:12px;padding:8px 6px;flex:1 1 calc(33.333% - 4px);min-width:0;text-align:center;justify-content:center;display:flex;align-items:center;gap:3px}
+  .tcnt{font-size:10px;padding:1px 5px;margin-left:3px}
+  .tabs{gap:4px;padding:6px 8px}
 }
 @media(max-width:400px){
   .header h1{font-size:20px}
@@ -282,10 +292,13 @@ body.ops-mode .ops-banner{display:block}
   .score-ring{width:60px;height:60px}
   .s-num{font-size:20px}
   .metric-val{font-size:17px}
+  .tab{font-size:11px;padding:7px 4px}
 }
 @media(max-width:360px){
   .controls-row{grid-template-columns:1fr}
   select{font-size:15px}
+  .tab{font-size:10px}
+  .tcnt{font-size:9px;padding:1px 4px}
 }
 </style>
 </head>
@@ -295,27 +308,48 @@ body.ops-mode .ops-banner{display:block}
   <h1>🔥 신고가 위치 판별 엔진</h1>
   <div class="header-sub">Minervini · VCP · ATH · Fibonacci · Retest 복합 분석</div>
   <div class="controls">
-    <div class="controls-row">
-      <select id="selN">
-        <option value="150">상위 150종목</option>
-        <option value="300" selected>상위 300종목</option>
-        <option value="450">상위 450종목</option>
-        <option value="538">전체 538종목</option>
-        <option value="auto">🔄 자동 유니버스</option>
-      </select>
-      <select id="selMin">
-        <option value="40">최소 40점</option>
-        <option value="50" selected>최소 50점</option>
-        <option value="60">최소 60점</option>
+    <!-- 일반 모드: 최소 점수만 노출 (클라이언트 필터링) -->
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="selMin" onchange="applyMinScoreFilter()" style="flex:1">
+        <option value="40">최소 40점 (모든 후보)</option>
+        <option value="50" selected>최소 50점 (균형)</option>
+        <option value="60">최소 60점 (보수적)</option>
+        <option value="70">최소 70점 (강력만)</option>
+        <option value="80">최소 80점 (PRIME-S 급)</option>
       </select>
     </div>
-    <div class="new-toggle">
-      <input type="checkbox" id="chkNew">
-      <label for="chkNew">🆕 신규상장 종목 포함 (KRX 자동수집)</label>
+    <!-- 관리자 모드 컨트롤 (admin URL에서만 노출) -->
+    <div id="adminControls" style="display:none;margin-top:8px">
+      <div class="controls-row">
+        <select id="selN">
+          <option value="150">상위 150종목</option>
+          <option value="300" selected>상위 300종목</option>
+          <option value="450">상위 450종목</option>
+          <option value="538">전체 538종목</option>
+          <option value="auto">🔄 자동 유니버스</option>
+        </select>
+      </div>
+      <div class="new-toggle">
+        <input type="checkbox" id="chkNew">
+        <label for="chkNew">🆕 신규상장 종목 포함 (KRX 자동수집)</label>
+      </div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-scan" id="btnScan" onclick="startScan()" style="flex:1">🔍 신고가 위치 분석 시작</button>
-      <button id="btnReset" onclick="resetScan()" title="스캔 초기화" style="background:#1a2540;border:1.5px solid #2a3a5a;color:#6b7a99;border-radius:12px;font-size:13px;font-weight:700;padding:0 14px;cursor:pointer;white-space:nowrap;transition:all .2s">↺ 초기화</button>
+    <!-- 자동 스캔 안내 + 카운트다운 -->
+    <div id="autoScanInfo" style="background:linear-gradient(135deg,#1a2540,#0d1829);border:1px solid #2a3a5a;border-radius:12px;padding:14px 16px;margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:13px;color:#6b7a99;margin-bottom:3px">📊 자동 스캔 운영</div>
+          <div style="font-size:14px;color:#fcd34d;font-weight:700">16:00 (정규장 종가) · 21:00 (시간외 후)</div>
+          <div id="lastScanInfo" style="font-size:12px;color:#8896b3;margin-top:4px">분석 종목: -</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#6b7a99">다음 스캔까지</div>
+          <div id="nextScanCountdown" style="font-size:18px;color:#22d3ee;font-weight:800;font-family:monospace">--:--:--</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px" id="adminScanWrap">
+      <button class="btn-scan" id="btnScan" onclick="startScan()" style="flex:1;display:none">🔍 신고가 위치 분석 시작 (관리자)</button>
     </div>
   </div>
 </div>
@@ -334,7 +368,7 @@ body.ops-mode .ops-banner{display:block}
   <div class="stat clickable" onclick="statFlt(this,'KILLER')" title="킬러필터만 보기"><div class="stat-lbl">⚡ 킬러</div><div class="stat-val" id="cntK">-</div></div>
   <div class="stat clickable" onclick="statFlt(this,'ENTRY')" title="진입 가능 종목만 보기"><div class="stat-lbl">🟢 진입가능</div><div class="stat-val" id="cntEntry" style="color:#22c55e">-</div></div>
   <div class="stat clickable" onclick="statFlt(this,'RS_LEADER')" title="RS 상위 20% 주도주만 보기"><div class="stat-lbl">🏅 주도주</div><div class="stat-val" id="cntRS" style="color:#fbbf24">-</div></div>
-  <div class="stat clickable" onclick="statFlt(this,'TOMORROW_BUY')" title="조용히 눌린 PRIME 종목 — 3~5일 보유 전략 (백테스트 5일 승률 52.9%)"><div class="stat-lbl">🎯 내일매수</div><div class="stat-val" id="cntTB" style="color:#f87171">-</div></div>
+  <div class="stat clickable" onclick="statFlt(this,'TOMORROW_BUY')" title="PRIME + 페널티없음 + 풀백재돌파형 (백테스트 116건: 10일 승률 61.2%, 평균 +3.55%, +5% 도달 38.8%)"><div class="stat-lbl">🎯 단기후보</div><div class="stat-val" id="cntTB" style="color:#f87171">-</div></div>
   <div class="stat"><div class="stat-lbl">📊 확산도</div><div class="stat-val" id="cntBreadth" style="font-size:13px">-</div></div>
   <div class="stat"><div class="stat-lbl">🌐 市新高</div><div class="stat-val" id="cntNaver" style="font-size:13px">-</div></div>
 </div>
@@ -353,19 +387,23 @@ body.ops-mode .ops-banner{display:block}
 
 <div class="tabs-wrap">
   <div class="tabs">
-    <button class="tab active" onclick="flt(this,'ALL')">전체</button>
-    <button class="tab tb" onclick="flt(this,'BREAKOUT_BOTTOM')">🏔️ 바닥탈출형</button>
-    <button class="tab tp" onclick="flt(this,'PULLBACK_REBREAK')">💎 눌림재돌파형</button>
-    <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형</button>
-    <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터</button>
-    <button class="tab tr" onclick="flt(this,'RETEST')">↩ Retest</button>
-    <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가</button>
-    <button class="tab" onclick="flt(this,'TOP')">🔥 A이상만</button>
-    <button class="tab" onclick="flt(this,'EARLY')">🔍 초기탐색(B)</button>
-    <button class="tab" onclick="flt(this,'CB')">📡 CB 추적</button>
-    <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능</button>
-    <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS)</button>
-    <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')">🎯 내일매수 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
+    <button class="tab active" onclick="flt(this,'ALL')">전체 <span id="tabAllCnt" class="tcnt">-</span></button>
+    <button class="tab tb" onclick="flt(this,'BREAKOUT_BOTTOM')">🏔️ 바닥탈출형 <span id="tabBBCnt" class="tcnt">-</span></button>
+    <button class="tab tp" onclick="flt(this,'PULLBACK_REBREAK')">💎 눌림재돌파형 <span id="tabPRCnt" class="tcnt">-</span></button>
+    <button class="tab tt" onclick="flt(this,'TREND_CONTINUE')">📈 추세진행형 <span id="tabTCCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'KILLER')">⚡ 킬러필터 <span id="tabKCnt" class="tcnt">-</span></button>
+    <button class="tab tr" onclick="flt(this,'RETEST')">↩ Retest <span id="tabRetestCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'ATH')">🚀 역사적신고가 <span id="tabATHCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'TOP')">🔥 A이상만 <span id="tabTopCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'EARLY')">🔍 초기탐색(B) <span id="tabEarlyCnt" class="tcnt">-</span></button>
+    <button class="tab" onclick="flt(this,'CB')">📡 CB 추적 <span id="tabCBCnt" class="tcnt">-</span></button>
+    <button class="tab entry-tab" onclick="flt(this,'ENTRY')">🟢 진입가능 <span id="tabEntryCnt" class="tcnt">-</span></button>
+    <button class="tab rs-tab" onclick="flt(this,'RS_LEADER')">🏅 주도주(RS) <span id="tabRSCnt" class="tcnt">-</span></button>
+    <button class="tab buy-tab" onclick="flt(this,'TOMORROW_BUY')" title="PRIME + 페널티없음 + 풀백재돌파 — 10일 승률 61.2% (백테스트 116건)">🎯 단기후보 <span id="tabTBCnt" style="background:#ef444433;border:1px solid #ef444466;color:#f87171;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
+    <button class="tab mb-tab" onclick="flt(this,'MULTIBAGGER')" title="5배 후보 (백테스트 1051건 평균 1.4년 추적: +50% 도달 72.6%, +200% 도달 25.6%, +500% 도달 7.7%). type=TREND + ATH + Retest + RVOL2x + RSI 적정 조합">🚀 5배 후보 <span id="tabMBCnt" class="tcnt">-</span></button>
+    <button class="tab s2-tab" onclick="flt(this,'STAGE2')" title="Weinstein Stage 2 — 본격 상승 단계 (가격 > 30주선, 30주선 상승 중). Stage 2 early(ma150 +0~15%)가 가장 이상적 매수 시점">🌱 Stage2 <span id="tabS2Cnt" class="tcnt">-</span></button>
+    <button class="tab gold-tab" onclick="flt(this,'GOLDEN')" title="🌟 황금매수 — Stage 2 EARLY (ma150 +0~15%, 본격 상승 초기) + Stage 1→2 전환 종목. 진짜 매수 시점인 종목들만 압축. 백테스트상 5배 후보 풀의 핵심.">🌟 황금매수 <span id="tabGoldCnt" class="tcnt">-</span></button>
+    <button class="tab top-tab" onclick="flt(this,'TOP_PICK')" title="🏆 최우선 매수 — 🌟 황금매수 ∩ 🚀 5배 후보 GOOD 교집합. 매수 시점 최적 + 5배 잠재력 검증된 종목만. 가장 확신 있는 매수 후보 (1/2~1/3 풀 사이즈 권장).">🏆 최우선 <span id="tabTopCnt2" class="tcnt">-</span></button>
     <button class="tab coil-tab" onclick="flt(this,'COILING')">📅 고가응축 <span id="tabCoilCnt" style="background:#8b5cf633;border:1px solid #8b5cf666;color:#c4b5fd;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:3px;font-weight:700">-</span></button>
   </div>
 </div>
@@ -396,32 +434,159 @@ body.ops-mode .ops-banner{display:block}
 let all=[], cf='ALL';
 const API=window.location.origin;
 
+// URL에 ?admin=KEY 있으면 관리자 모드 (수동 스캔 버튼 노출)
+const urlParams = new URLSearchParams(window.location.search);
+const ADMIN_KEY = urlParams.get('admin') || '';
+
+// 관리자 모드 — URL ?admin=vipasset1004 또는 localStorage 기억
+(function() {
+  const params = new URLSearchParams(location.search);
+  const ADMIN_VAL = "vipasset1004";
+  if (params.get("admin") === ADMIN_VAL) {
+    localStorage.setItem("nh_admin", ADMIN_VAL);
+  }
+})();
+
 window.addEventListener('load',()=>{
-  fetch(API+'/api/cached-results').then(r=>r.json())
-    .then(d=>{ if(d.results?.length){all=d.results;render(all);updateStat(d);} }).catch(()=>{});
+  // GitHub Actions 모드: /api/cached-results 대신 정적 results.json
+  fetch('./results.json?t='+Date.now(), {cache:'no-store'}).then(r=>r.json())
+    .then(d=>{
+      _lastScanMeta = { total_scanned: d.total_scanned, total_found: d.total_found, scan_date: d.scan_date };
+      if(d && d.results && d.results.length){
+        _allUnfiltered = d.results.slice();
+        // 초기 최소 점수 필터 적용
+        const minS = parseFloat(document.getElementById('selMin').value || '50');
+        all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
+        render(all); updateStat(d);
+      }
+      // 분석/발견 종목 수 표시 (비율까지)
+      const lsi = document.getElementById('lastScanInfo');
+      if(lsi){
+        const n_scanned = d.total_scanned || 0;
+        const n_found = d.total_found || (d.results ? d.results.length : 0);
+        const ratio = n_scanned > 0 ? (n_found/n_scanned*100).toFixed(1) : '-';
+        let dstr = '';
+        if(d.scan_date){
+          const dt = new Date(d.scan_date);
+          dstr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')} 스캔`;
+        }
+        lsi.innerHTML = `<span style="font-size:14px;color:#fcd34d;font-weight:700">${n_scanned.toLocaleString()}개 중 <span style="color:#22c55e">${n_found}개 발견</span> (${ratio}%)</span>${dstr?`<span style="margin-left:8px;color:#6b7a99">· ${dstr}</span>`:''}`;
+      }
+    }).catch(()=>{});
+  // 관리자 모드면 수동 스캔 버튼 + 컨트롤 노출
+  if(ADMIN_KEY){
+    const sb = document.getElementById('btnScan');
+    if(sb){ sb.style.display='block'; }
+    const ac = document.getElementById('adminControls');
+    if(ac){ ac.style.display='block'; }
+  }
+  // 다음 자동 스캔 카운트다운 시작
+  startCountdown();
 });
 
+// 클라이언트 사이드 최소 점수 필터 (자동 스캔 결과 재필터)
+let _allUnfiltered = [];
+let _lastScanMeta = {};
+function applyMinScoreFilter(){
+  const minS = parseFloat(document.getElementById('selMin').value || '50');
+  if(!_allUnfiltered.length) _allUnfiltered = all.slice();
+  all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
+  render(all);
+  // 발견 수 + 비율 갱신
+  const lsi = document.getElementById('lastScanInfo');
+  if(lsi){
+    const n_scanned = _lastScanMeta.total_scanned || 0;
+    const n_found = all.length;
+    const ratio = n_scanned > 0 ? (n_found/n_scanned*100).toFixed(1) : '-';
+    let dstr = '';
+    if(_lastScanMeta.scan_date){
+      const dt = new Date(_lastScanMeta.scan_date);
+      dstr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')} 스캔`;
+    }
+    lsi.innerHTML = `<span style="font-size:14px;color:#fcd34d;font-weight:700">${n_scanned.toLocaleString()}개 중 <span style="color:#22c55e">${n_found}개 발견</span> (${ratio}%)</span>${dstr?`<span style="margin-left:8px;color:#6b7a99">· ${dstr}</span>`:''}`;
+  }
+}
+
+function startCountdown(){
+  const el = document.getElementById('nextScanCountdown');
+  if(!el) return;
+  function tick(){
+    const now = new Date();
+    // 다음 16:00 또는 21:00 (KST) — 사용자 로컬시간이 KST라고 가정
+    const targets = [16, 21];
+    let next = null;
+    for(const h of targets){
+      const t = new Date(now);
+      t.setHours(h, 0, 0, 0);
+      if(t > now){ next = t; break; }
+    }
+    if(!next){
+      // 오늘 둘 다 지남 → 내일 16:00
+      next = new Date(now);
+      next.setDate(next.getDate()+1);
+      next.setHours(16, 0, 0, 0);
+    }
+    const diff = next - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    // 자동 스캔 시간 ±2분 안에 들어가면 30초 후 자동 새로고침
+    if(h===0 && m<2){
+      setTimeout(()=>location.reload(), 30000);
+    }
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// startScan: 관리자 모드면 admin key 추가
+const _originalStartScan = null;
+
 function resetScan(){
-  fetch(API+'/api/reset-scan').then(r=>r.json()).then(()=>{
-    const btn=document.getElementById('btnScan');
-    btn.disabled=false; btn.textContent='🔍 신고가 위치 분석 시작';
-    document.getElementById('progWrap').classList.remove('on');
-    const rb=document.getElementById('btnReset');
-    rb.textContent='✓ 초기화됨'; rb.style.color='#4ade80';
-    setTimeout(()=>{rb.textContent='↺ 초기화';rb.style.color='#6b7a99';},2000);
-  });
+  // GitHub Actions 모드: 서버 reset 불필요 — 클라이언트만 리셋
+  const btn=document.getElementById('btnScan');
+  btn.disabled=false; btn.textContent='🔍 신고가 위치 분석 시작';
+  document.getElementById('progWrap').classList.remove('on');
+  const rb=document.getElementById('btnReset');
+  rb.textContent='✓ 초기화됨'; rb.style.color='#4ade80';
+  setTimeout(()=>{rb.textContent='↺ 초기화';rb.style.color='#6b7a99';},2000);
 }
 
 function startScan(){
+  // GitHub Actions 모드: SSE 라이브 스캔 불가 → 옵션 분기
+  const isAdmin = localStorage.getItem('nh_admin') === 'vipasset1004';
+
+  if (isAdmin) {
+    // 관리자: GitHub Actions 워크플로우 트리거 페이지로
+    if (confirm('GitHub Actions에서 수동 스캔을 트리거합니다.\n새 탭에서 "Run workflow" 버튼을 누르세요.')) {
+      window.open('https://github.com/vipasset1004-lucky/new-high-screener/actions/workflows/scan.yml', '_blank', 'noopener');
+    }
+    return;
+  }
+
+  // 일반 사용자: 정적 결과 새로고침만
+  const btn=document.getElementById('btnScan');
+  btn.disabled=true; btn.textContent='📡 새로고침 중...';
+  fetch('./results.json?t='+Date.now(), {cache:'no-store'}).then(r=>r.json()).then(d=>{
+    if(d && d.results){
+      _lastScanMeta = { total_scanned: d.total_scanned, total_found: d.total_found, scan_date: d.scan_date };
+      _allUnfiltered = d.results.slice();
+      const minS = parseFloat(document.getElementById('selMin').value || '50');
+      all = _allUnfiltered.filter(r => (r.score || 0) >= minS);
+      render(all); updateStat(d);
+      btn.disabled=false; btn.textContent='✓ 갱신됨';
+      setTimeout(()=>{btn.textContent='🔍 신고가 위치 분석 시작';},1500);
+    }
+  }).catch(()=>{btn.disabled=false; btn.textContent='🔍 신고가 위치 분석 시작';});
+  return;
+
+  // ── 아래는 SSE 라이브 스캔 (서버 모드 전용 — 비활성) ──
+  /*
   const topN=document.getElementById('selN').value;
   const minS=document.getElementById('selMin').value;
   const inclNew=document.getElementById('chkNew').checked?'1':'0';
-  const btn=document.getElementById('btnScan');
-  btn.disabled=true; btn.textContent='📡 분석 중...';
-  document.getElementById('progWrap').classList.add('on');
-  document.getElementById('cards').innerHTML='';
-  all=[];
-  let es=new EventSource(`${API}/api/scan?top_n=${topN}&min_score=${minS}&include_new=${inclNew}`);
+  let es=new EventSource(`${API}/api/scan?top_n=${topN}&min_score=${minS}&include_new=${inclNew}&admin=${encodeURIComponent(ADMIN_KEY)}`);
   es.onmessage=e=>{
     const m=JSON.parse(e.data.replace(/\bNaN\b/g,'null'));
     if(m.type==='progress'){
@@ -448,6 +613,7 @@ function startScan(){
     }
   };
   es.onerror=()=>{es.close();btn.disabled=false;btn.textContent='🔍 신고가 위치 분석 시작';document.getElementById('progWrap').classList.remove('on');};
+  */
 }
 
 function show(r,f){
@@ -464,14 +630,30 @@ function show(r,f){
   if(f==='ENTRY')      return r.entry_action==='STRONG_BUY'||r.entry_action==='BUY'||r.entry_action==='SMALL_BUY';
   if(f==='RS_LEADER')  return r.rs_top20===true;
   if(f==='TOMORROW_BUY'){
-    // 눌림 반등형 (백테스트 5일 승률 52.9%, 기준선 52.4% 상회)
-    // 조용히(저거래량) 눌리면서 가격은 유지 = 건강한 조정 후 재상승
+    // v2: 검증된 단기(10일) 알파 — PRIME + 페널티없음 + PULLBACK 재돌파형
     if(!(r.is_prime_s||r.is_prime)) return false;
-    if(!r.rs_top20) return false;
-    if(!r.price_held) return false;          // 고점 근처 가격 유지
-    if((r.candle_score||0) > 1) return false; // 오늘 종가 저점권 (눌림)
-    if((r.gap_pct||0) < -3) return false;     // 갭다운 -3% 초과 제외
+    if(r.type !== 'PULLBACK_REBREAK') return false;
+    var sd = r.score_detail || {};
+    if((sd.penalty || 0) !== 0) return false;
+    if((r.rsi || 0) >= 75) return false;
     return true;
+  }
+  if(f==='MULTIBAGGER'){
+    return (r.multibagger_score||0) >= 60;
+  }
+  if(f==='STAGE2'){
+    var w1 = r.weinstein || {};
+    return (w1.stage === 'Stage2') || (w1.transition === true);
+  }
+  if(f==='GOLDEN'){
+    var w2 = r.weinstein || {};
+    return (w2.stage === 'Stage2' && w2.sub === 'early') || (w2.transition === true);
+  }
+  if(f==='TOP_PICK'){
+    var w3 = r.weinstein || {};
+    var isGolden = (w3.stage === 'Stage2' && w3.sub === 'early') || (w3.transition === true);
+    var isMB = (r.multibagger_score || 0) >= 60;
+    return isGolden && isMB;
   }
   if(f==='COILING'){
     // 고가응축: 3~5일 후 상승 준비 종목
@@ -530,10 +712,34 @@ function render(results){
   let filtered = results.filter(r=>show(r,cf));
   if(opsMode) filtered = filtered.filter(opsFilter);
   if(cf==='TOMORROW_BUY'){
-    // 눌림 반등형 정렬: RS강도 > 가격유지 > base_days > PRIME-S
     filtered.sort((a,b)=>{
       const s=r=>((r.rs_rank_pct||0)*0.8)+(r.is_prime_s?20:0)+((r.base_days||0)*1.5)+((r.cb_score||0)*0.2);
       return s(b)-s(a);
+    });
+  } else if(cf==='GOLDEN' || cf==='TOP_PICK' || cf==='STAGE2'){
+    // 황금매수/최우선/Stage2: 1순위 Stage 2 early > 2순위 transition > 3순위 mb 점수 > 4순위 ma150 거리 작은 순
+    filtered.sort(function(a,b){
+      var wa=a.weinstein||{}, wb=b.weinstein||{};
+      var aEarly=(wa.stage==='Stage2'&&wa.sub==='early')?1:0;
+      var bEarly=(wb.stage==='Stage2'&&wb.sub==='early')?1:0;
+      if(aEarly!==bEarly) return bEarly-aEarly;
+      var aTr=wa.transition===true?1:0;
+      var bTr=wb.transition===true?1:0;
+      if(aTr!==bTr) return bTr-aTr;
+      var ma=a.multibagger_score||0, mb=b.multibagger_score||0;
+      if(ma!==mb) return mb-ma;
+      return (wa.dist_pct||999)-(wb.dist_pct||999);
+    });
+  } else if(cf==='MULTIBAGGER'){
+    // 5배 후보: mb 점수 > Stage 우선 > score
+    filtered.sort(function(a,b){
+      var ma=a.multibagger_score||0, mb=b.multibagger_score||0;
+      if(ma!==mb) return mb-ma;
+      var wa=a.weinstein||{}, wb=b.weinstein||{};
+      var aEarly=(wa.stage==='Stage2'&&wa.sub==='early')||wa.transition===true?1:0;
+      var bEarly=(wb.stage==='Stage2'&&wb.sub==='early')||wb.transition===true?1:0;
+      if(aEarly!==bEarly) return bEarly-aEarly;
+      return (b.score||0)-(a.score||0);
     });
   } else {
     filtered.sort((a,b)=>b.score-a.score);
@@ -581,6 +787,25 @@ function card(r){
   if(cb>=70) bdgs+=`<span class="bdg bdg-cb">📡 CB ${cb} — 강한 지속</span>`;
   else if(cb>=50) bdgs+=`<span class="bdg bdg-cb">📡 CB ${cb}</span>`;
   if(r.is_new_listing)    bdgs+=`<span class="bdg bdg-new">🆕 신규상장</span>`;
+  // 5배 후보 뱃지 (멀티배거 점수 60+)
+  const mb = r.multibagger_score || 0;
+  if(mb >= 80) bdgs+=`<span class="bdg" style="background:#06b6d433;border:1px solid #06b6d4;color:#22d3ee">🚀 5배 후보 [STRONG ${mb}]</span>`;
+  else if(mb >= 60) bdgs+=`<span class="bdg" style="background:#06b6d422;border:1px solid #06b6d488;color:#67e8f9">⭐ 잠재력 [GOOD ${mb}]</span>`;
+  // Weinstein Stage 뱃지
+  if(r.weinstein){
+    const w = r.weinstein;
+    const sname = w.stage + (w.sub ? ' ['+w.sub+']' : '');
+    if(w.stage === 'Stage2' && w.sub === 'early')
+      bdgs+=`<span class="bdg" style="background:#10b98133;border:1px solid #10b981;color:#34d399">🌱 ${sname} (ma150 +${w.dist_pct}%)</span>`;
+    else if(w.stage === 'Stage2')
+      bdgs+=`<span class="bdg" style="background:#10b98122;border:1px solid #10b98188;color:#6ee7b7">📈 ${sname} (ma150 +${w.dist_pct}%)</span>`;
+    else if(w.transition === true)
+      bdgs+=`<span class="bdg" style="background:#fbbf2422;border:1px solid #fbbf24;color:#fcd34d">⚡ Stage 1→2 전환</span>`;
+    else if(w.stage === 'Stage3')
+      bdgs+=`<span class="bdg" style="background:#f59e0b22;border:1px solid #f59e0b88;color:#fbbf24">⚠️ Stage 3 (분배 주의)</span>`;
+    else if(w.stage === 'Stage4')
+      bdgs+=`<span class="bdg" style="background:#ef444422;border:1px solid #ef4444;color:#f87171">⛔ Stage 4 (하락)</span>`;
+  }
   const themeHtml=(r.themes&&r.themes.length)?`<div class="badges" style="padding-top:6px">${r.themes.map(t=>`<span class="bdg bdg-theme">${t}</span>`).join('')}</div>`:'';
   const bdgHtml=(bdgs?`<div class="badges">${bdgs}</div>`:'')+themeHtml;
 
@@ -600,6 +825,21 @@ function card(r){
   if(r.ma20_dist_pct!=null&&r.ma20_dist_pct<=10) sigs.push({l:`MA20이격 ${r.ma20_dist_pct}%`,c:'on'});
   if(r.sector_bonus>0)  sigs.push({l:`섹터+${r.sector_bonus}pt`,c:'on'});
   if(r.rsi>75)          sigs.push({l:`RSI ${r.rsi}`,c:'warn'});
+  // ── 외국인/기관 수급 (Phase A) ──
+  if(r.supply){
+    const f5=r.supply.foreigner_5d||0, o5=r.supply.organ_5d||0, cd=r.supply.foreign_inst_combo_days||0;
+    const fM=(f5/1e6).toFixed(1), oM=(o5/1e6).toFixed(1);
+    if(cd>=3)         sigs.push({l:`👑 외+기관 동반${cd}일`,c:'hot'});
+    else if(cd>=1)    sigs.push({l:`외+기관 동반${cd}일`,c:'on'});
+    if(f5>=500_000)   sigs.push({l:`🌐 외국인 +${fM}M`,c:'hot'});
+    else if(f5>0)     sigs.push({l:`외국인 +${fM}M`,c:'on'});
+    else if(f5<0)     sigs.push({l:`외국인 ${fM}M`,c:'warn'});
+    if(o5>=500_000)   sigs.push({l:`🏛️ 기관 +${oM}M`,c:'hot'});
+    else if(o5>0)     sigs.push({l:`기관 +${oM}M`,c:'on'});
+    else if(o5<0)     sigs.push({l:`기관 ${oM}M`,c:'warn'});
+  }
+  if(r.rs_line_high)    sigs.push({l:'📈 RS라인 신고가',c:'hot'});
+  if(r.failed_breakout) sigs.push({l:'⚠️ Failed BO',c:'warn'});
   const sigHtml=sigs.map(s=>`<span class="sig ${s.c}">${s.l}</span>`).join('');
 
   const rsiC=r.rsi>75?'cr':r.rsi>60?'cg':'cgreen';
@@ -622,7 +862,7 @@ function card(r){
   const baseTxt=vd.base_days>0?` · 베이스 ${vd.base_days}일(${Math.round(vd.base_days/5)}주)`:'';
   const vcpTxt=`수축 ${vd.progressive_price||0}회 · 거래량수축 ${vd.progressive_vol||0}회${vd.vol_dryup?' · 드라이업✓':''}${baseTxt}`;
   const fibTxt=r.fib_depth!=null?`피보나치 조정: ${r.fib_depth}%${r.fib_depth<=38.2?' ✓ 이상적':r.fib_depth<=50?' 보통':' 깊음'}`:'';
-  const penHtml=(sd.penalty_rsn?.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(' · ')} (${sd.penalty}점)</div>`:'';
+  const penHtml=(sd.penalty_rsn && sd.penalty_rsn.length)?`<div class="pen-txt">⚠️ 감점: ${sd.penalty_rsn.join(' · ')} (${sd.penalty}점)</div>`:'';
   const bonusHtml=sd.type_bonus>0?`<div class="drow"><span class="dname" style="color:#f59e0b">유형보너스</span><div class="dbg"><div class="dfill" style="width:${sd.type_bonus/10*100}%;background:#f59e0b"></div></div><span class="dval cg">+${sd.type_bonus}</span></div>`:'';
 
   return `
@@ -765,15 +1005,66 @@ function updateStat(d){
 }
 
 function setCnt(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function setTabCnt(id, n){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.textContent=n;
+  el.classList.toggle('has', n>0);
+}
 function counts(r){
-  setCnt('cntAll',r.length);
-  setCnt('cntBB',r.filter(x=>x.type==='BREAKOUT_BOTTOM').length);
-  setCnt('cntPR',r.filter(x=>x.type==='PULLBACK_REBREAK').length);
-  setCnt('cntTC',r.filter(x=>x.type==='TREND_CONTINUE').length);
-  setCnt('cntK',r.filter(x=>x.first_breakout&&x.rvol>=2.0).length);
-  setCnt('cntEntry',r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length);
-  setCnt('cntRS',r.filter(x=>x.rs_top20===true).length);
-  const tbCnt=r.filter(x=>(x.is_prime_s||x.is_prime)&&x.rs_top20===true&&x.price_held===true&&(x.candle_score||0)<=1&&(x.gap_pct||0)>-3).length;
+  const cAll=r.length;
+  const cBB =r.filter(x=>x.type==='BREAKOUT_BOTTOM').length;
+  const cPR =r.filter(x=>x.type==='PULLBACK_REBREAK').length;
+  const cTC =r.filter(x=>x.type==='TREND_CONTINUE').length;
+  const cK  =r.filter(x=>x.first_breakout&&x.rvol>=2.0).length;
+  const cRetest=r.filter(x=>x.retest||x.retest_bonus).length;
+  const cATH=r.filter(x=>x.is_ath===true).length;
+  const cTop=r.filter(x=>x.grade==='A+'||x.grade==='A').length;
+  const cEarly=r.filter(x=>x.grade==='B').length;
+  const cCB =r.filter(x=>(x.cb_score||0)>=50).length;
+  const cEntry=r.filter(x=>x.entry_action==='STRONG_BUY'||x.entry_action==='BUY'||x.entry_action==='SMALL_BUY').length;
+  const cRS =r.filter(x=>x.rs_top20===true).length;
+  setCnt('cntAll',cAll);
+  setCnt('cntBB',cBB);
+  setCnt('cntPR',cPR);
+  setCnt('cntTC',cTC);
+  setCnt('cntK',cK);
+  setCnt('cntEntry',cEntry);
+  setCnt('cntRS',cRS);
+  // 탭 뱃지
+  setTabCnt('tabAllCnt',cAll);
+  setTabCnt('tabBBCnt',cBB);
+  setTabCnt('tabPRCnt',cPR);
+  setTabCnt('tabTCCnt',cTC);
+  setTabCnt('tabKCnt',cK);
+  setTabCnt('tabRetestCnt',cRetest);
+  setTabCnt('tabATHCnt',cATH);
+  setTabCnt('tabTopCnt',cTop);
+  setTabCnt('tabEarlyCnt',cEarly);
+  setTabCnt('tabCBCnt',cCB);
+  setTabCnt('tabEntryCnt',cEntry);
+  setTabCnt('tabRSCnt',cRS);
+  // 5배 후보 카운트
+  const cMB = r.filter(x=>(x.multibagger_score||0) >= 60).length;
+  const tabMBEl = document.getElementById('tabMBCnt');
+  if(tabMBEl){tabMBEl.textContent=cMB;tabMBEl.classList.toggle('has', cMB>0);}
+  // Stage 2 카운트
+  const cS2 = r.filter(function(x){var w=x.weinstein||{};return w.stage==='Stage2'||w.transition===true;}).length;
+  const tabS2El = document.getElementById('tabS2Cnt');
+  if(tabS2El){tabS2El.textContent=cS2;tabS2El.classList.toggle('has', cS2>0);}
+  // 🌟 황금매수 카운트
+  const cGold = r.filter(function(x){var w=x.weinstein||{};return (w.stage==='Stage2'&&w.sub==='early')||w.transition===true;}).length;
+  const tabGoldEl = document.getElementById('tabGoldCnt');
+  if(tabGoldEl){tabGoldEl.textContent=cGold;tabGoldEl.classList.toggle('has', cGold>0);}
+  // 🏆 최우선 카운트 (교집합)
+  const cTopPick = r.filter(function(x){
+    var w=x.weinstein||{};
+    var g=(w.stage==='Stage2'&&w.sub==='early')||w.transition===true;
+    return g && (x.multibagger_score||0)>=60;
+  }).length;
+  const tabTopEl2 = document.getElementById('tabTopCnt2');
+  if(tabTopEl2){tabTopEl2.textContent=cTopPick;tabTopEl2.classList.toggle('has', cTopPick>0);}
+  const tbCnt=r.filter(function(x){var sd=x.score_detail||{};return (x.is_prime_s||x.is_prime)&&x.type==='PULLBACK_REBREAK'&&((sd.penalty||0)===0)&&((x.rsi||0)<75);}).length;
   setCnt('cntTB',tbCnt);
   const tabTBEl=document.getElementById('tabTBCnt');
   if(tabTBEl){tabTBEl.textContent=tbCnt;tabTBEl.style.background=tbCnt>=3?'#ef444444':tbCnt>=1?'#ef444433':'#1a2540';tabTBEl.style.color=tbCnt>=1?'#f87171':'#4a5a7a';}
