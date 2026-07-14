@@ -1,7 +1,7 @@
 {
-  "scan_date": "2026-07-14T18:07:55.276536",
+  "scan_date": "2026-07-14T22:23:03.636944",
   "total_found": 1,
-  "total_scanned": 731,
+  "total_scanned": 738,
   "breadth_scan": 0.1,
   "naver_breadth": null,
   "breadth_trend": "─",
@@ -86,8 +86,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -287625,
-        "organ_5d": 655099,
+        "foreigner_5d": -193013,
+        "organ_5d": 603819,
         "foreign_inst_combo_days": 1,
         "foreign_buy_days": 1,
         "organ_buy_days": 5
@@ -147,5 +147,5 @@
   "prev_tickers": [
     "086790"
   ],
-  "prev_scan_date": "2026-07-13T23:23:05.540149"
+  "prev_scan_date": "2026-07-14T18:07:55.276536"
 }
