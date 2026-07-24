@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-07-24T18:24:17.840071",
+  "scan_date": "2026-07-24T22:26:49.350207",
   "total_found": 1,
-  "total_scanned": 690,
+  "total_scanned": 726,
   "breadth_scan": 0.1,
   "naver_breadth": null,
-  "breadth_trend": "▼",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "093320",
@@ -89,8 +89,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -12125,
-        "organ_5d": 9964,
+        "foreigner_5d": -12228,
+        "organ_5d": 10322,
         "foreign_inst_combo_days": 1,
         "foreign_buy_days": 1,
         "organ_buy_days": 3
@@ -144,8 +144,7 @@
     }
   ],
   "prev_tickers": [
-    "093320",
-    "105560"
+    "093320"
   ],
-  "prev_scan_date": "2026-07-23T22:46:07.754082"
+  "prev_scan_date": "2026-07-24T18:24:17.840071"
 }
