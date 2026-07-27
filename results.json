@@ -1,13 +1,11 @@
 {
-  "scan_date": "2026-07-27T19:47:09.179937",
+  "scan_date": "2026-07-27T23:21:53.056778",
   "total_found": 0,
   "total_scanned": 695,
   "breadth_scan": 0.0,
   "naver_breadth": null,
-  "breadth_trend": "▼",
+  "breadth_trend": "─",
   "results": [],
-  "prev_tickers": [
-    "093320"
-  ],
-  "prev_scan_date": "2026-07-24T22:26:49.350207"
+  "prev_tickers": [],
+  "prev_scan_date": "2026-07-27T19:47:09.179937"
 }
