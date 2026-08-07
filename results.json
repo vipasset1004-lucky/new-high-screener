@@ -1,7 +1,7 @@
 {
-  "scan_date": "2026-08-06T22:54:00.907831",
+  "scan_date": "2026-08-07T17:17:40.106249",
   "total_found": 1,
-  "total_scanned": 742,
+  "total_scanned": 737,
   "breadth_scan": 0.1,
   "naver_breadth": null,
   "breadth_trend": "─",
@@ -20,11 +20,11 @@
       "type_emoji": "💎",
       "type_color": "#3b82f6",
       "type_desc": "1차 상승 조정 완료 · 2차 상승 시작",
-      "current_price": 40100.0,
-      "rsi": 68.3,
-      "adx": 34.0,
+      "current_price": 40400.0,
+      "rsi": 69.3,
+      "adx": 33.7,
       "rvol": 2.32,
-      "days_ago": 9,
+      "days_ago": 10,
       "breakout_price": 40300.0,
       "first_breakout": false,
       "first_vol_surge": true,
@@ -32,11 +32,11 @@
       "is_ath": true,
       "base_days": 13,
       "fib_depth": 35.6,
-      "ret_20d": 24.7,
-      "ret_63d": 25.5,
-      "pos_pct": 50.5,
+      "ret_20d": 25.3,
+      "ret_63d": 25.9,
+      "pos_pct": 51.6,
       "above_30pct": true,
-      "pos_in_range": 91.2,
+      "pos_in_range": 93.2,
       "high_52w": 41400.0,
       "low_52w": 26650.0,
       "template_cnt": 8,
@@ -48,7 +48,7 @@
         "50>150·200선",
         "가격>50선",
         "저점+30%↑",
-        "52주고가3%이내",
+        "52주고가2%이내",
         "ADX강세34",
         "60선상승전환",
         "120선상승전환"
@@ -58,7 +58,7 @@
       "vol_dried": true,
       "above_ma5": true,
       "retest_bonus": false,
-      "rs_diff": -52.6,
+      "rs_diff": -52.2,
       "gap_pct": 0.0,
       "candle_score": 0,
       "obv_bonus": 3,
@@ -73,12 +73,12 @@
       "sector_count": 1,
       "is_sector_leader": true,
       "sector_bonus": -1,
-      "cb_score_raw": 70,
-      "cb_score": 85,
-      "nh_proximity_pct": -3.1,
-      "avg_tv": 3979441352.0,
-      "ud_ratio": 2.94,
-      "ma20_dist_pct": 7.3,
+      "cb_score_raw": 82,
+      "cb_score": 97,
+      "nh_proximity_pct": -2.4,
+      "avg_tv": 4096343712.0,
+      "ud_ratio": 3.04,
+      "ma20_dist_pct": 6.9,
       "ma20_support": true,
       "updown_bonus": 5,
       "is_prime_s": false,
@@ -94,17 +94,17 @@
         "organ_buy_days": 4
       },
       "weinstein": {
-        "stage": "Stage3",
-        "sub": "",
-        "slope_30d": 1.8,
-        "dist_pct": 24.2,
-        "transition": false
+        "stage": "Stage2",
+        "sub": "mid",
+        "slope_30d": 2.08,
+        "dist_pct": 24.9,
+        "transition": true
       },
-      "entry_price": 40100.0,
-      "stop_loss": 37293.0,
-      "target_1": 48120.0,
-      "target_2": 60150.0,
-      "trailing_stop": 37385.0,
+      "entry_price": 40400.0,
+      "stop_loss": 37572.0,
+      "target_1": 48480.0,
+      "target_2": 60600.0,
+      "trailing_stop": 37792.0,
       "score_detail": {
         "s3_template": 29,
         "s4_vcp": 8,
@@ -113,12 +113,12 @@
         "type_bonus": 4,
         "penalty": -6,
         "penalty_rsn": [
-          "신고가9일경과"
+          "신고가10일경과"
         ],
         "vcp_detail": {
           "progressive_price": 1,
           "progressive_vol": 1,
-          "bb_ratio": 0.8,
+          "bb_ratio": 0.76,
           "vol_dryup": false,
           "dry_ratio": 2.51,
           "base_days": 13,
@@ -146,5 +146,5 @@
   "prev_tickers": [
     "089860"
   ],
-  "prev_scan_date": "2026-08-06T18:43:09.141374"
+  "prev_scan_date": "2026-08-06T22:54:00.907831"
 }
