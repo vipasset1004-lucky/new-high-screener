@@ -1,7 +1,7 @@
 {
-  "scan_date": "2026-08-07T17:17:40.106249",
+  "scan_date": "2026-08-07T21:52:26.817332",
   "total_found": 1,
-  "total_scanned": 737,
+  "total_scanned": 738,
   "breadth_scan": 0.1,
   "naver_breadth": null,
   "breadth_trend": "─",
@@ -87,10 +87,10 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -44413,
-        "organ_5d": 78480,
-        "foreign_inst_combo_days": 2,
-        "foreign_buy_days": 2,
+        "foreigner_5d": -69096,
+        "organ_5d": 97851,
+        "foreign_inst_combo_days": 1,
+        "foreign_buy_days": 1,
         "organ_buy_days": 4
       },
       "weinstein": {
@@ -146,5 +146,5 @@
   "prev_tickers": [
     "089860"
   ],
-  "prev_scan_date": "2026-08-06T22:54:00.907831"
+  "prev_scan_date": "2026-08-07T17:17:40.106249"
 }
