@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-08-10T17:43:03.185468",
+  "scan_date": "2026-08-10T21:57:08.085999",
   "total_found": 2,
   "total_scanned": 764,
   "breadth_scan": 0.3,
   "naver_breadth": null,
-  "breadth_trend": "▲",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "089860",
@@ -87,8 +87,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -69096,
-        "organ_5d": 97851,
+        "foreigner_5d": -40436,
+        "organ_5d": 96690,
         "foreign_inst_combo_days": 1,
         "foreign_buy_days": 1,
         "organ_buy_days": 4
@@ -225,8 +225,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 40213,
-        "organ_5d": -26458,
+        "foreigner_5d": 28303,
+        "organ_5d": -27960,
         "foreign_inst_combo_days": 2,
         "foreign_buy_days": 2,
         "organ_buy_days": 2
@@ -282,7 +282,8 @@
     }
   ],
   "prev_tickers": [
-    "089860"
+    "089860",
+    "340570"
   ],
-  "prev_scan_date": "2026-08-07T21:52:26.817332"
+  "prev_scan_date": "2026-08-10T17:43:03.185468"
 }
