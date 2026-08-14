@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-08-14T17:19:34.752124",
+  "scan_date": "2026-08-14T21:54:48.568537",
   "total_found": 3,
-  "total_scanned": 781,
+  "total_scanned": 784,
   "breadth_scan": 0.4,
   "naver_breadth": null,
-  "breadth_trend": "▲",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "001450",
@@ -87,10 +87,10 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 252856,
-        "organ_5d": 385434,
-        "foreign_inst_combo_days": 4,
-        "foreign_buy_days": 4,
+        "foreigner_5d": 95532,
+        "organ_5d": 806679,
+        "foreign_inst_combo_days": 3,
+        "foreign_buy_days": 3,
         "organ_buy_days": 5
       },
       "weinstein": {
@@ -227,8 +227,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -26770,
-        "organ_5d": -48670,
+        "foreigner_5d": -28444,
+        "organ_5d": -35792,
         "foreign_inst_combo_days": 0,
         "foreign_buy_days": 1,
         "organ_buy_days": 0
@@ -365,8 +365,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -43045,
-        "organ_5d": -223287,
+        "foreigner_5d": -26537,
+        "organ_5d": -240269,
         "foreign_inst_combo_days": 0,
         "foreign_buy_days": 1,
         "organ_buy_days": 1
@@ -423,7 +423,8 @@
   ],
   "prev_tickers": [
     "001450",
+    "340570",
     "483650"
   ],
-  "prev_scan_date": "2026-08-13T21:58:39.714435"
+  "prev_scan_date": "2026-08-14T17:19:34.752124"
 }
