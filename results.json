@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-08-18T16:42:01.883936",
+  "scan_date": "2026-08-18T21:35:45.557910",
   "total_found": 1,
   "total_scanned": 800,
   "breadth_scan": 0.1,
   "naver_breadth": null,
-  "breadth_trend": "▼",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "003690",
@@ -87,10 +87,10 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 204390,
-        "organ_5d": -128539,
+        "foreigner_5d": 164458,
+        "organ_5d": -124946,
         "foreign_inst_combo_days": 0,
-        "foreign_buy_days": 4,
+        "foreign_buy_days": 3,
         "organ_buy_days": 1
       },
       "weinstein": {
@@ -144,9 +144,7 @@
     }
   ],
   "prev_tickers": [
-    "001450",
-    "340570",
-    "483650"
+    "003690"
   ],
-  "prev_scan_date": "2026-08-17T21:33:59.659528"
+  "prev_scan_date": "2026-08-18T16:42:01.883936"
 }
