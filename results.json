@@ -1,5 +1,5 @@
 {
-  "scan_date": "2026-08-21T16:48:01.658791",
+  "scan_date": "2026-08-21T21:37:07.678233",
   "total_found": 3,
   "total_scanned": 736,
   "breadth_scan": 0.4,
@@ -88,11 +88,11 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -125220,
-        "organ_5d": 23808,
+        "foreigner_5d": -31974,
+        "organ_5d": -79031,
         "foreign_inst_combo_days": 0,
-        "foreign_buy_days": 2,
-        "organ_buy_days": 2
+        "foreign_buy_days": 3,
+        "organ_buy_days": 1
       },
       "weinstein": {
         "stage": "Stage2",
@@ -222,8 +222,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 63111,
-        "organ_5d": -27173,
+        "foreigner_5d": 47316,
+        "organ_5d": -25712,
         "foreign_inst_combo_days": 0,
         "foreign_buy_days": 2,
         "organ_buy_days": 2
@@ -362,10 +362,10 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 162700,
-        "organ_5d": 916946,
-        "foreign_inst_combo_days": 3,
-        "foreign_buy_days": 3,
+        "foreigner_5d": 30845,
+        "organ_5d": 1021765,
+        "foreign_inst_combo_days": 2,
+        "foreign_buy_days": 2,
         "organ_buy_days": 5
       },
       "weinstein": {
@@ -422,7 +422,7 @@
   "prev_tickers": [
     "089860",
     "003690",
-    "483650"
+    "001450"
   ],
-  "prev_scan_date": "2026-08-20T21:37:18.113398"
+  "prev_scan_date": "2026-08-21T16:48:01.658791"
 }
