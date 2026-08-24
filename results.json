@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-08-24T17:00:15.549009",
+  "scan_date": "2026-08-24T21:39:21.394561",
   "total_found": 5,
-  "total_scanned": 718,
+  "total_scanned": 719,
   "breadth_scan": 0.7,
   "naver_breadth": null,
-  "breadth_trend": "▲",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "089860",
@@ -88,8 +88,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -31974,
-        "organ_5d": -79031,
+        "foreigner_5d": 4557,
+        "organ_5d": -99586,
         "foreign_inst_combo_days": 0,
         "foreign_buy_days": 3,
         "organ_buy_days": 1
@@ -225,11 +225,11 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 12635,
-        "organ_5d": -61129,
-        "foreign_inst_combo_days": 0,
-        "foreign_buy_days": 2,
-        "organ_buy_days": 1
+        "foreigner_5d": 55336,
+        "organ_5d": -13256,
+        "foreign_inst_combo_days": 1,
+        "foreign_buy_days": 3,
+        "organ_buy_days": 2
       },
       "weinstein": {
         "stage": "Stage2",
@@ -363,8 +363,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 30845,
-        "organ_5d": 1021765,
+        "foreigner_5d": 100641,
+        "organ_5d": 672187,
         "foreign_inst_combo_days": 2,
         "foreign_buy_days": 2,
         "organ_buy_days": 5
@@ -499,11 +499,11 @@
       "rs_line_high": false,
       "failed_breakout": true,
       "supply": {
-        "foreigner_5d": 14636,
-        "organ_5d": 17611,
-        "foreign_inst_combo_days": 1,
+        "foreigner_5d": 7142,
+        "organ_5d": 27019,
+        "foreign_inst_combo_days": 2,
         "foreign_buy_days": 4,
-        "organ_buy_days": 2
+        "organ_buy_days": 3
       },
       "weinstein": {
         "stage": "Stage3",
@@ -636,11 +636,11 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -21558,
-        "organ_5d": -11831,
+        "foreigner_5d": -21368,
+        "organ_5d": 15935,
         "foreign_inst_combo_days": 1,
         "foreign_buy_days": 1,
-        "organ_buy_days": 2
+        "organ_buy_days": 3
       },
       "weinstein": {
         "stage": "Stage2",
@@ -694,8 +694,10 @@
   ],
   "prev_tickers": [
     "089860",
-    "003690",
-    "001450"
+    "483650",
+    "001450",
+    "051900",
+    "340570"
   ],
-  "prev_scan_date": "2026-08-21T21:37:07.678233"
+  "prev_scan_date": "2026-08-24T17:00:15.549009"
 }
