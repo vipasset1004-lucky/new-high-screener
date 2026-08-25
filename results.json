@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-08-25T16:49:13.647324",
+  "scan_date": "2026-08-25T21:38:08.467012",
   "total_found": 4,
   "total_scanned": 729,
   "breadth_scan": 0.5,
   "naver_breadth": null,
-  "breadth_trend": "▼",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "089860",
@@ -88,11 +88,11 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 4557,
-        "organ_5d": -99586,
-        "foreign_inst_combo_days": 0,
+        "foreigner_5d": 16718,
+        "organ_5d": -59902,
+        "foreign_inst_combo_days": 1,
         "foreign_buy_days": 3,
-        "organ_buy_days": 1
+        "organ_buy_days": 2
       },
       "weinstein": {
         "stage": "Stage2",
@@ -225,11 +225,11 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 55336,
-        "organ_5d": -13256,
-        "foreign_inst_combo_days": 1,
-        "foreign_buy_days": 3,
-        "organ_buy_days": 2
+        "foreigner_5d": 82647,
+        "organ_5d": 11644,
+        "foreign_inst_combo_days": 2,
+        "foreign_buy_days": 4,
+        "organ_buy_days": 3
       },
       "weinstein": {
         "stage": "Stage2",
@@ -363,8 +363,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": 100641,
-        "organ_5d": 672187,
+        "foreigner_5d": -141781,
+        "organ_5d": 513412,
         "foreign_inst_combo_days": 2,
         "foreign_buy_days": 2,
         "organ_buy_days": 5
@@ -499,8 +499,8 @@
       "rs_line_high": false,
       "failed_breakout": false,
       "supply": {
-        "foreigner_5d": -186230,
-        "organ_5d": 301780,
+        "foreigner_5d": -33496,
+        "organ_5d": 153343,
         "foreign_inst_combo_days": 1,
         "foreign_buy_days": 2,
         "organ_buy_days": 4
@@ -560,8 +560,7 @@
     "089860",
     "483650",
     "001450",
-    "051900",
-    "340570"
+    "078930"
   ],
-  "prev_scan_date": "2026-08-24T21:39:21.394561"
+  "prev_scan_date": "2026-08-25T16:49:13.647324"
 }
