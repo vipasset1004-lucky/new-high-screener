@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-09-15T21:33:00.993696",
+  "scan_date": "2026-09-16T01:06:11.296574",
   "total_found": 3,
-  "total_scanned": 752,
+  "total_scanned": 756,
   "breadth_scan": 0.4,
   "naver_breadth": null,
-  "breadth_trend": "▲",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "089860",
@@ -423,8 +423,9 @@
     }
   ],
   "prev_tickers": [
+    "089860",
     "036800",
-    "055550"
+    "028100"
   ],
-  "prev_scan_date": "2026-09-15T02:29:58.762215"
+  "prev_scan_date": "2026-09-15T21:33:00.993696"
 }
