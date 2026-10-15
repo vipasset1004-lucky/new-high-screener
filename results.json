@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-10-15T21:32:50.353845",
+  "scan_date": "2026-10-16T01:10:54.396027",
   "total_found": 4,
-  "total_scanned": 783,
+  "total_scanned": 791,
   "breadth_scan": 0.5,
   "naver_breadth": null,
-  "breadth_trend": "▼",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "041960",
@@ -569,12 +569,10 @@
     }
   ],
   "prev_tickers": [
-    "036800",
-    "251970",
-    "192820",
     "041960",
-    "096530",
-    "000500"
+    "192820",
+    "036800",
+    "251970"
   ],
-  "prev_scan_date": "2026-10-15T01:22:58.928935"
+  "prev_scan_date": "2026-10-15T21:32:50.353845"
 }
