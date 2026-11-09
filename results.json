@@ -1,5 +1,5 @@
 {
-  "scan_date": "2026-11-10T02:17:40.537552",
+  "scan_date": "2026-11-10T06:52:43.793914",
   "total_found": 1,
   "total_scanned": 726,
   "breadth_scan": 0.1,
@@ -150,5 +150,5 @@
   "prev_tickers": [
     "089860"
   ],
-  "prev_scan_date": "2026-11-07T03:48:04.350524"
+  "prev_scan_date": "2026-11-10T02:17:40.537552"
 }
