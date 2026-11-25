@@ -1,10 +1,10 @@
 {
-  "scan_date": "2026-11-26T02:53:29.338968",
+  "scan_date": "2026-11-26T05:58:48.109931",
   "total_found": 2,
   "total_scanned": 718,
   "breadth_scan": 0.3,
   "naver_breadth": null,
-  "breadth_trend": "▲",
+  "breadth_trend": "─",
   "results": [
     {
       "ticker": "012750",
@@ -285,7 +285,8 @@
     }
   ],
   "prev_tickers": [
-    "012750"
+    "012750",
+    "192820"
   ],
-  "prev_scan_date": "2026-11-25T06:52:05.796543"
+  "prev_scan_date": "2026-11-26T02:53:29.338968"
 }
